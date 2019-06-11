@@ -14,12 +14,10 @@ modelFitting = function(thisTrialData, fileName, paras, model){
   # since the participants' initial strategies are unlikely optimal
   # we multiple the optimal opportunity cost by subOptimalRatio
   subOptimalRatio = 0.9 
-  QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9)
-  QLPApOptim = 0.93 * stepDuration / (1 - 0.9) 
   if(any(paras == "phiR")){
-    wIni = (5/6 + 0.93) / 2 * stepDuration  * subOptimalRatio
+    wIni = optimRewardRates[[2]] * stepDuration  * subOptimalRatio
   }else if(any(paras == "gamma") || modelName == "baseline"){
-    wIni = (QHPApOptim + QLPApOptim) / 2  * subOptimalRatio
+    wIni = optimRewardRates[[2]] * stepDuration / (1 - 0.9)  * subOptimalRatio
   }else{
     print("wrong model name!")
     break
@@ -31,8 +29,7 @@ modelFitting = function(thisTrialData, fileName, paras, model){
   trialEarnings = thisTrialData$trialEarnings
   timeWaited[trialEarnings > 0] = scheduledWait[trialEarnings > 0]
   cond = unique(thisTrialData$condition)
-  tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
-  condIdx = ifelse(cond =="HP", 1, 2)
+  tMax = max(tMaxs)
   nTimeSteps = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
   data_list <- list(tMax = tMax,

@@ -260,10 +260,10 @@ getPartCorrelation = function(data){
 block2session = function(tempt){
   nBlock = length(unique(tempt$blockNum))
   nTrials = sapply(1:nBlock, function(i) sum(tempt$blockNum == i))
-  thisTrialData = within(tempt, {trialNum = trialNum + rep(c(0, cumsum(nTrials)[1:2]), time = nTrials);
-  sellTime = sellTime + rep((1:3-1) * blockSecs, time = nTrials);
-  trialStartTime = trialStartTime + rep((1:3-1) * blockSecs, time = nTrials);
-  totalEarnings = totalEarnings +  rep(c(0, totalEarnings[cumsum(nTrials)[1:2]]),
+  thisTrialData = within(tempt, {trialNum = trialNum + rep(c(0, cumsum(nTrials)[1:nBlock - 1]), time = nTrials);
+  sellTime = sellTime + rep((1:nBlock-1) * blockSecs, time = nTrials);
+  trialStartTime = trialStartTime + rep((1:nBlock-1) * blockSecs, time = nTrials);
+  totalEarnings = totalEarnings +  rep(c(0, totalEarnings[cumsum(nTrials)[1:nBlock - 1]]),
                                        time = nTrials)
   })
   return(thisTrialData)

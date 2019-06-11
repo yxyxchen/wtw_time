@@ -31,5 +31,5 @@ myThemeBig = theme_linedraw() +
 
 symnum.args <- list(cutpoints = c(0,0.001, 0.01, 0.05, 1),
                     symbols = c("***", "**", "*", "ns"))
-
+conditionColors =  c("#008837", "#7b3294")
 paraColors = list("#e41a1c", "#377eb8", "#4daf4a", "#fe9929", "#ffd92f")

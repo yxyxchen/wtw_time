@@ -16,7 +16,8 @@ tMaxs = c(16, 32) # trial durations
 blockMins = 10 # block duration in mins
 blockSecs = blockMins * 60 # block duration in secs
 iti = 2 # iti duration in secs
-tGrid = seq(0, blockSecs, 0.1)
+tGrid = seq(0, blockSecs, 1)
+kmGrid = seq(0, min(tMaxs), 0.1)
 
 ######### reward variable ########
 tokenValue = 10 #value of the token
@@ -35,5 +36,5 @@ LP = 0.5 * tokenValue / ((mean(seqLP[1:4]) + seqLP[4])/2 + iti)
   
 save("conditions", "conditionColors", "tMaxs", "blockMins", "blockSecs", "iti", "tGrid", 
      "tokenValue", "stepDuration", "optimRewardRates", 
-     "optimWaitTimes", "loseValue",  file = "wtwSettings.RData")
+     "optimWaitTimes", "loseValue", "kmGrid", file = "wtwSettings.RData")
 
