@@ -1,5 +1,5 @@
 # differences from the cluster version can be found by searching # needed in local computers
-expModelFitting = function(modelName, paras){
+expModelFitting = function(modelName){
   # create outfiles
   dir.create("genData") 
   dir.create("genData/expModelFitting") 
@@ -48,7 +48,12 @@ expModelFitting = function(modelName, paras){
   
   foreach(i = 1 : n) %dopar% {
     thisID = idList[[i]]
-    thisTrialData = block2session(trialData[[thisID]])
+    thisTrialData = trialData[[thisID]]
+    # excluded some trials
+    excluedTrials = which(thisTrialData$trialStartTime > (blockSecs - 2 * min(tMaxs)))
+    thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
+    thisTrialData = block2session(thisTrialData)
+    
     fileName = sprintf("genData/expModelFitting/%s/s%s", modelName, thisID)
     modelFitting(thisTrialData, fileName, paras, model)
   }

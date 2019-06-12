@@ -16,7 +16,7 @@ loadAllData = function() {
   
   # get fileNames
   dataDir = "data"
-  fileNames = list.files(path= dataDir, pattern=('*_1.txt'))
+  fileNames = list.files(path= dataDir, pattern=('wtw-timing-fixed_[0-9]{3}_[0-9].txt'))
   fileNames = mixedsort(sort(fileNames))
   nFile = length(fileNames)
   if(any(duplicated(fileNames))){

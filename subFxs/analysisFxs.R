@@ -344,3 +344,17 @@ stand = function(input){
   output = (input - mean(input)) / sd(input)
   return(output)
 }
+
+
+movAve = function(x, windowSize){
+  if(windowSize %% 2 == 0){
+    print("windowSize should be an even number")
+  }
+  halfWin = (windowSize - 1) / 2
+  y = sapply(1 : length(x), function(i){
+    startIdx = max(1, i - halfWin)
+    endIdx = min(length(x), i + halfWin)
+    mean(x[startIdx:endIdx])
+  })
+  return(y)
+}

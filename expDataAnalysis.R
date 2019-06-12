@@ -1,4 +1,6 @@
 # in this dataset, only trials within the 7 mins will be kept. Therefore, we don't need to delete any data
+# determine whether use truncated data
+isTrun = T
 # load libraries
 source('subFxs/loadFxs.R') # for loading data 
 source('subFxs/analysisFxs.R') # for analysis 
@@ -10,6 +12,9 @@ dir.create("genData/expDataAnalysis")
 
 # load setting parameters 
 load("wtwSettings.RData")
+if(isTrun){
+  tGrid = seq(0, 590, by = 1) # here I use a truncated tGrid, according to max(sellTime) 
+}
 
 # load all data
 allData = loadAllData()
@@ -30,6 +35,7 @@ plotWTW = F
 # initialize outputs, organised by block
 AUC = numeric(length =n * nBlock)
 totalEarnings =  numeric(length =n * nBlock)
+nExclude =  numeric(length =n * nBlock)
 nAction = numeric(length =n * nBlock)
 wtwEarly = numeric(length =n * nBlock)
 timeWTW_ = vector(mode = "list", length = n * nBlock)
@@ -45,17 +51,29 @@ nTrial = numeric(length =n * nBlock)
 stdWd = numeric(length =n * nBlock) # standard deviation from the survival curve for the whole block
 cvWd =  numeric(length =n * nBlock)
 # descriptive statistics for individual subjects and blocks
+# define a new tGrid 
 for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
   #if(blockData[blockData$id == thisID, "AUC"] > 20 & blockData$condition[blockData$id == thisID] == "LP"){
   for (bkIdx in 1: nBlock){
+    noIdx = (sIdx - 1) * nBlock + bkIdx # 
     # select data 
     thisTrialData = trialData[[thisID]]
     thisBlockIdx = (thisTrialData$blockNum == bkIdx)
     thisTrialData = thisTrialData[thisBlockIdx,]
+    # truncate the last min(tMaxs) seconds
+    if(isTrun){
+      excluedTrials = which(thisTrialData$trialStartTime > (blockSecs - 2 * min(tMaxs)))
+      nExclude[[noIdx]] = length(excluedTrials)
+      if( nExclude[[noIdx]] > 0){
+        includeEnd = min(excluedTrials) - 1
+      }else{
+        includeEnd = length(thisTrialData$blockNum)
+      }
+      thisTrialData = truncateTrials(thisTrialData, 1, includeEnd)
+    }
     # generate arguments for later analysis 
     label = sprintf('Subject %s, Cond %s, %s',thisID, unique(thisTrialData$condition), hdrData$stress[sIdx])
-    noIdx = (sIdx - 1) * nBlock + bkIdx # 
     tMax = min(tMaxs)
     
     # calcualte totalEarnings
@@ -108,14 +126,18 @@ for (sIdx in 1 : n) {
     trialEndTime_[[noIdx]] = thisTrialData$sellTime
   } # loop over blocks
 }
-
-# save data
-save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridBlock.RData')
 blockData = data.frame(id = rep(allIDs, each = nBlock), blockNum = rep( t(1 : nBlock), n),
                        condition = factor(rep(c("LP", "HP"), each = n), levels = c("HP", "LP")),
                        AUC = AUC, wtwEarly = wtwEarly,totalEarnings = totalEarnings,
                        nAction = nAction, stdQuitTime = stdQuitTime, cvQuitTime = cvQuitTime,
-                       muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial, stdWd = stdWd, cvWd = cvWd)
+                       muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial, stdWd = stdWd, cvWd = cvWd,
+                       nExclude = nExclude)
+# lastEndTime = sapply(1 : (nBlock * n), function(i) max(trialEndTime_[[i]]))
+# hist(lastEndTime)
+# range(lastEndTime)
+
+# save data
+save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridBlock.RData')
 save(blockData, file = 'genData/expDataAnalysis/blockData.RData')
 
 # descriptive statistics for individual subjects and blocks
@@ -130,7 +152,6 @@ for (sIdx in 1 : n) {
 
 # plot AUC in two conditions
 library("ggpubr")
-load("wtwSettings.RData")
 blockData %>% ggplot(aes(condition, AUC)) + geom_boxplot() +
   geom_dotplot(binaxis='y', stackdir='center', aes(fill = condition)) +
   scale_fill_manual(values = conditionColors) + 
@@ -140,7 +161,7 @@ blockData %>% ggplot(aes(condition, AUC)) + geom_boxplot() +
                      bracket.size = 1, size = 6) + ylim(c(0, 20))
 dir.create("figures")
 dir.create("figures/expDataAnalysis")
-ggsave(sprintf("figures/expDataAnalysis/AUC.png"), width = 4, height = 3)
+ggsave(sprintf("figures/expDataAnalysis/zTruc_AUC.png"), width = 4, height = 3)
 
 # plot wtw 
 plotData = data.frame(wtw = unlist(timeWTW_), time = rep(tGrid, n),
@@ -153,12 +174,12 @@ plotData %>% ggplot(aes(time, mean, color = condition,  fill = condition)) +
   geom_line(size = 1) + facet_wrap(~condition, scales = "free") +
   scale_color_manual(values = conditionColors) + scale_fill_manual(values = conditionColors) +
   xlab("Cumulative task time (min)") +
-  scale_x_continuous(breaks = seq(0, max(tGrid), by = 60 * 5),
-                     labels = paste(seq(0, 10, by = 5))) + 
+  scale_x_continuous(breaks = seq(0, max(tGrid), by = 60 * 3),
+                     label = seq(0, max(tGrid), by = 60 * 3) / 60) + 
   ylab("Willingness to wait (s)") +
   geom_hline(data = policy, aes(yintercept = wt, color = condition), linetype = "dotted", size = 1.5) +
   myTheme + ylim(c(0, 18))
-ggsave("figures/expDataAnalysis/wtw_timecourse.png", width = 6, height = 3)
+ggsave("figures/expDataAnalysis/zTruc_wtw_timecourse.png", width = 6, height = 3)
 
 # plot survival curve
 data.frame(kmsc = unlist(kmOnGrid_), time = rep(kmGrid, n * nBlock),
@@ -169,7 +190,7 @@ data.frame(kmsc = unlist(kmOnGrid_), time = rep(kmGrid, n * nBlock),
   geom_ribbon(aes(ymin=min, ymax=max), colour=NA, alpha = 0.3)+
   geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) + 
   xlab("Elapsed time (s)") + ylab("Survival rate") + scale_color_manual(values = conditionColors)
-ggsave("figures/expDataAnalysis/kmsc_timecourse.png", width = 5, height = 4) 
+ggsave("figures/expDataAnalysis/zTruc_kmsc_timecourse.png", width = 5, height = 4) 
 
 
 # learning curve 
@@ -187,3 +208,15 @@ data.frame(value = unlist(timeReRate_), time = rep(tGrid, n * nBlock),
   geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) +
   xlab("Elapsed time (s)") + ylab("Reward rate") +
   scale_color_manual(values = conditionColors)
+ggsave("figures/expDataAnalysis/zTruc_reRate.png", width = 4, height = 3.5) 
+
+# plot LP AUC against HP AUC, to see adapation and correlation
+data.frame(HPAUC = blockData[blockData$condition == "HP", "AUC"],
+           LPAUC = blockData[blockData$condition == "LP", "AUC"]) %>% 
+  ggplot(aes(LPAUC, HPAUC)) + geom_point(size = 2) +
+  geom_abline(intercept = 0, slope = 1) +
+  xlim(c(0, min(tMaxs)))+ ylim(c(0, min(tMaxs))) +
+  xlab("LP AUC (s)") + ylab("HP AUC (s)") +
+  myTheme
+ggsave("figures/expDataAnalysis/zTruc_AUC_Cmp.png", width = 3.5, height = 3.5) 
+                 

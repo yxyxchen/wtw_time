@@ -1,8 +1,0 @@
-ID: 559
-cbal: 1
-bk1 distrib: logspace_1.75_32
-bk2 distrib: unif16
-bk1 trial function: showTrials
-bk2 trial function: showTrials
-randSeed: 213241.4984999999869615
-sessionTime: 2019     3     4    10    41    55
