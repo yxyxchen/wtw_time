@@ -53,7 +53,6 @@ expModelFitting = function(modelName){
     excluedTrials = which(thisTrialData$trialStartTime > (blockSecs - 2 * min(tMaxs)))
     thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
     thisTrialData = block2session(thisTrialData)
-    
     fileName = sprintf("genData/expModelFitting/%s/s%s", modelName, thisID)
     modelFitting(thisTrialData, fileName, paras, model)
   }
