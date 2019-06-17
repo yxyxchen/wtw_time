@@ -50,7 +50,9 @@ expModelFitting = function(modelName){
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
     # excluded some trials
-    excluedTrials = which(thisTrialData$trialStartTime > (blockSecs - 2 * min(tMaxs)))
+    cond = unique(thisTrialData$condition)
+    cIdx = ifelse(cond == "HP", 1, 2)
+    excluedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
     thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
     thisTrialData = block2session(thisTrialData)
     fileName = sprintf("genData/expModelFitting/%s/s%s", modelName, thisID)
