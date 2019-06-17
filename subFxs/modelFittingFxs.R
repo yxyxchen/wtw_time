@@ -13,11 +13,12 @@ modelFitting = function(thisTrialData, fileName, paras, model){
   # determine wIni
   # since the participants' initial strategies are unlikely optimal
   # we multiple the optimal opportunity cost by subOptimalRatio
+  # do I need to change the initial value here?
   subOptimalRatio = 0.9 
   if(any(paras == "phiR")){
-    wIni = optimRewardRates[[2]] * stepDuration  * subOptimalRatio
+    wIni = mean(as.double(optimRewardRates)) * stepDuration  * subOptimalRatio
   }else if(any(paras == "gamma") || modelName == "baseline"){
-    wIni = optimRewardRates[[2]] * stepDuration / (1 - 0.9)  * subOptimalRatio
+    wIni =  mean(as.double(optimRewardRates)) * stepDuration / (1 - 0.9)  * subOptimalRatio
   }else{
     print("wrong model name!")
     break
@@ -37,7 +38,10 @@ modelFitting = function(thisTrialData, fileName, paras, model){
                     timeWaited = timeWaited,
                     N = length(timeWaited),
                     trialEarnings = trialEarnings,
-                    Ts = Ts)
+                    Ts = Ts,
+                    stepDuration = stepDuration,
+                    iti = iti,
+                    tokenValue = tokenValue)
   fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
                iter = nIter) 
   # extract parameters

@@ -12,9 +12,6 @@ dir.create("genData/expDataAnalysis")
 
 # load setting parameters 
 load("wtwSettings.RData")
-if(isTrun){
-  tGrid = seq(0, 590, by = 1) # here I use a truncated tGrid, according to max(sellTime) 
-}
 
 # load all data
 allData = loadAllData()
@@ -61,9 +58,11 @@ for (sIdx in 1 : n) {
     thisTrialData = trialData[[thisID]]
     thisBlockIdx = (thisTrialData$blockNum == bkIdx)
     thisTrialData = thisTrialData[thisBlockIdx,]
+    cond = unique(thisTrialData$condition)
+    cIdx = ifelse(cond == "HP", 1, 2)
     # truncate the last min(tMaxs) seconds
     if(isTrun){
-      excluedTrials = which(thisTrialData$trialStartTime > (blockSecs - 2 * min(tMaxs)))
+      excluedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
       nExclude[[noIdx]] = length(excluedTrials)
       if( nExclude[[noIdx]] > 0){
         includeEnd = min(excluedTrials) - 1
