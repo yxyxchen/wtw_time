@@ -32,7 +32,7 @@ loadAllData = function() {
   for(i in 1 : nFile){
     fileName = fileNames[i]
     id = substr(fileName, 18,20)
-    junk = read.csv(sprintf("%s/%s", dataDir, fileName), col.names = colNames)
+    junk = read.csv(sprintf("%s/%s", dataDir, fileName), col.names = colNames, header = F)
     junk$condition = ifelse(junk$blockNum == 1, "LP", "HP")
     hdrData[i,1] = id
     trialData[[id]] = junk
@@ -73,7 +73,7 @@ loadExpPara = function(paras, dirName){
       junk = junk[1:nE,]
     }
     expPara[i, 1:nE] = junk[,1]
-    expPara[i, (nE + 1) : (2 * nE)] = junk[,2]
+    expPara[i, (nE + 1) : (2 * nE)] = junk[,3]
     expPara[i, (2*nE + 1) : (3 * nE)] = junk[,9]
     expPara[i, (3 * nE + 1) : (4 * nE)] = junk[,10]
   }
@@ -85,105 +85,51 @@ loadExpPara = function(paras, dirName){
   return(expPara)
 }
 
-getMode = function(x){
-  ob = density(x)
-  value = ob$x
-  dense = ob$y
-  return(value[which.max(dense)])
-}
-
-loadExpParaExtra = function(modelName, paras){
-  nE = length(paras) + 2
-  load("genData/expDataAnalysis/blockData.RData")
-  idList = unique(blockData$id) 
-  n = length(idList)
-  nE = length(paras) + 1
-  expParaMode = matrix(NA, n, nE)
-  expParaMedian = matrix(NA, n, nE)
-  for(i in 1 : n){
-    ID = idList[i]
-    fileName = sprintf("genData/expModelFitting/%s/s%d.txt", modelName, ID)
-    junk = read.csv(fileName, header = F)
-    
-    expParaMode[i, ] = apply(junk[,1:nE], MARGIN = 2, getMode)
-    expParaMedian[i, ] = apply(junk[,1:nE], MARGIN = 2, median)
-  }
-  expParaMode = data.frame(expParaMode)
-  expParaMedian = data.frame(expParaMedian)
-  
-  junk = c(paras, "log_lik")
-  colnames(expParaMode) =  paste0(junk, "Mode")
-  expParaMode$id = idList  # needed for left_join
-  colnames(expParaMedian) =  paste0(junk, "Median")
-  expParaMedian$id = idList  # needed for left_join
-  
-  outputs = list("expParaMedian" = expParaMedian, "expParaMode" = expParaMode)
-  return(outputs)
-}
-
-# for each sub
-loadExpParaMedian = function(modelName, paras, id){
-  nE = length(paras) + 2
-  load("genData/expDataAnalysis/blockData.RData")
-  nE = length(paras) + 1
-  expParaMedian = vector(length = nE)
-    fileName = sprintf("genData/expModelFitting/%s/s%d.txt", modelName, id)
-    junk = read.csv(fileName, header = F)
-    expParaMedian  = apply(junk[,1:nE], MARGIN = 2, median)
-  return(expParaMedian)
-}
-
-loadSimPara = function(paras, dirName){
+# I also need to load 2.5% and 97.5%
+loadCVPara = function(paras, dirName, pattern){
   # number of paras 
   nE = length(paras) + 1
   # number of files
-  fileNames = list.files(path= dirName, pattern=("*_summary.txt"))
+  fileNames = list.files(path= dirName, pattern= pattern)
   library("gtools")
   fileNames = mixedsort(sort(fileNames))
   n = length(fileNames) 
   sprintf("load %d files", n)
   
-  # extract seqIdxs and cbIdxs from filenames
-  seqIdxs = as.double(sapply(1:n, function(i){
-    tempt = regexpr("_r[0-9]*", fileNames[i]) 
-    match.length = attr(tempt, "match.length")
-    start = tempt[[1]] + 2
-    ending = tempt[[1]] + match.length - 1
-    substring(fileNames[i], start, ending)
-  })) + 1
-  nSeq = length(unique(seqIdxs))
-  
-  cbIdxs =  as.double(sapply(1:n, function(i){
-    tempt = regexpr("_s[0-9]*", fileNames[i]) 
-    match.length = attr(tempt, "match.length")
-    start = tempt[[1]] + 2
-    ending = tempt[[1]] + match.length - 1
-    substring(fileNames[i], start, ending)
-  }))
-  nComb = length(unique(cbIdxs))
-  
   # initialize the outout variable 
-  junk = c(paras, "LL_all")
-  varNames = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"))
-  simParaHP = array(dim = c(nE * 4, nSeq, nComb),
-                    dimnames = list(varNames, 1 : nSeq, 1 : nComb))
-  simParaLP = array(dim = c(nE * 4, nSeq, nComb), dimnames = list(varNames, 1 : nSeq, 1 : nComb))
+  expPara = matrix(NA, n, nE * 6)
+  idList = vector(length = n)
+  fList = vector(length = n)
+  sList = vector(length = n)
   # loop over files
   for(i in 1 : n){
-    # read the file
     fileName = fileNames[[i]]
     address = sprintf("%s/%s", dirName, fileName)
     junk = read.csv(address, header = F)
-    
-    # determine the condition 
-    if(grepl("HP", fileName)){
-      simParaHP[, seqIdxs[i], cbIdxs[i]] = unlist(junk[,c(1,2,9,10)])
-    }else{
-      simParaLP[, seqIdxs[i], cbIdxs[i]] = unlist(junk[,c(1,2,9,10)])
+    sIndexs = str_locate(fileName, "s[0-9]{1,2}")
+    sList[i] = as.double(substr(fileName, sIndexs[1]+1, sIndexs[2]))
+    fIndexs = str_locate(fileName, "f[0-9]{1,2}")
+    fList[i] = as.double(substr(fileName, fIndexs[1]+1, fIndexs[2]))
+    idList[i] = i
+    # delete the lp__ in the old version
+    if(nrow(junk) > nE){
+      junk = junk[1:nE,]
     }
+    expPara[i, 1:nE] = junk[,1]
+    expPara[i, (nE + 1) : (2 * nE)] = junk[,3]
+    expPara[i, (2*nE + 1) : (3 * nE)] = junk[,9]
+    expPara[i, (3 * nE + 1) : (4 * nE)] = junk[,10]
+    expPara[i, (4*nE + 1) : (5 * nE)] = junk[,4]
+    expPara[i, (5 * nE + 1) : (6 * nE)] = junk[,8]
   }
-  simPara = list(HP = simParaHP, LP =simParaLP)
   # transfer expPara to data.frame
-  return(simPara)
+  expPara = data.frame(expPara)
+  junk = c(paras, "LL_all")
+  colnames(expPara) = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"),
+                        paste0(junk, "2.5"),paste0(junk, "97.5"))
+  expPara$id = idList
+  expPara$sIdx = sList
+  expPara$fIdx = fList
+  return(expPara)
 }
 

@@ -29,6 +29,12 @@ plotTrialwiseData = F
 plotKMSC = F
 plotWTW = F
 
+# parameter for longtermR
+window = 2 * 60
+stepLen = 2 * 60
+nWindow = (blockSecs - window) / stepLen + 1
+
+
 # initialize outputs, organised by block
 AUC = numeric(length =n * nBlock)
 totalEarnings =  numeric(length =n * nBlock)
@@ -40,6 +46,8 @@ trialWTW_ = vector(mode = "list", length = n * nBlock)
 kmOnGrid_ = vector(mode = "list", length = n * nBlock)
 trialEndTime_ = vector(mode = "list", length = n * nBlock)
 trialReRate_ = vector(mode = "list", length = n * nBlock)
+longtermR_ = matrix(NA, nrow = nWindow, ncol = n * nBlock)
+shorttermR_ = matrix(NA, nrow = nWindow, ncol = n * nBlock)
 stdQuitTime = numeric(length =n * nBlock)
 cvQuitTime = numeric(length =n * nBlock)
 muQuitTime = numeric(length =n * nBlock)
@@ -47,8 +55,8 @@ nQuit = numeric(length =n * nBlock)
 nTrial = numeric(length =n * nBlock)
 stdWd = numeric(length =n * nBlock) # standard deviation from the survival curve for the whole block
 cvWd =  numeric(length =n * nBlock)
+
 # descriptive statistics for individual subjects and blocks
-# define a new tGrid 
 for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
   #if(blockData[blockData$id == thisID, "AUC"] > 20 & blockData$condition[blockData$id == thisID] == "LP"){
@@ -123,10 +131,45 @@ for (sIdx in 1 : n) {
     # calculate rewardRates
     trialReRate_[[noIdx]] = trialEarnings / (timeWaited + iti)
     trialEndTime_[[noIdx]] = thisTrialData$sellTime
+    
+    # calculate longtermR
+    longtermR =     sapply(1 : nWindow, function(i) {
+      startTime = (i-1) * stepLen
+      endTime = (i-1) * stepLen + window
+      junk = which(thisTrialData$trialStartTime >= startTime)
+      if(length(junk) == 0){
+        NA
+      }else{
+        startIdx = min(junk)
+        endIdx = max(which(thisTrialData$sellTime < endTime))
+        realStartTime = thisTrialData$trialStartTime[startIdx]
+        realEndTime = thisTrialData$sellTime[endIdx]
+        sum(thisTrialData$trialEarnings[startIdx : endIdx]) / (realEndTime - realStartTime)        
+      }
+    }) 
+    longtermR_[,noIdx] = longtermR
+    
+    # calculate shorttermR
+    # here timeWaited not includes reaction time
+    # not includes iti
+    shorttermR =   sapply(1 : nWindow, function(i) {
+      startTime = (i-1) * stepLen
+      endTime = (i-1) * stepLen + window
+      junk = which(thisTrialData$trialStartTime >= startTime)
+      if(length(junk) == 0){
+        NA
+      }else{
+        startIdx = min(which(thisTrialData$trialStartTime >= startTime))
+        endIdx = max(which(thisTrialData$sellTime < endTime))
+        longtermR[i] = mean(thisTrialData$trialEarnings[startIdx : endIdx] / timeWaited[startIdx : endIdx])
+      }
+    }) 
+    shorttermR_[,noIdx] = shorttermR
+    
   } # loop over blocks
 }
 blockData = data.frame(id = rep(allIDs, each = nBlock), blockNum = rep( t(1 : nBlock), n),
-                       condition = factor(rep(c("LP", "HP"), each = n), levels = c("HP", "LP")),
+                       condition = factor(rep(c("LP", "HP"), n), levels = c("HP", "LP")),
                        AUC = AUC, wtwEarly = wtwEarly,totalEarnings = totalEarnings,
                        nAction = nAction, stdQuitTime = stdQuitTime, cvQuitTime = cvQuitTime,
                        muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial, stdWd = stdWd, cvWd = cvWd,
@@ -140,14 +183,14 @@ save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridBlock.RData')
 save(blockData, file = 'genData/expDataAnalysis/blockData.RData')
 
 # descriptive statistics for individual subjects and blocks
-for (sIdx in 1 : n) {
-  thisID = allIDs[sIdx]
-  thisTrialData = trialData[[thisID]]
-  label = sprintf('Subject %s',thisID)
-  trialPlots(block2session(thisTrialData),label)
-  readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
-  graphics.off()
-}
+# for (sIdx in 1 : n) {
+#   thisID = allIDs[sIdx]
+#   thisTrialData = trialData[[thisID]]
+#   label = sprintf('Subject %s',thisID)
+#   trialPlots(block2session(thisTrialData),label)
+#   readline(prompt = paste('subject',thisID, '(hit ENTER to continue)'))
+#   graphics.off()
+# }
 
 # plot AUC in two conditions
 library("ggpubr")
@@ -192,23 +235,30 @@ data.frame(kmsc = unlist(kmOnGrid_), time = rep(kmGrid, n * nBlock),
 ggsave("figures/expDataAnalysis/zTruc_kmsc_timecourse.png", width = 5, height = 4) 
 
 
-# learning curve 
-trialReRareMove_ = lapply(1 : (nBlock * n), function(i){
-  movAve(trialReRate_[[i]], 11)
-})
-timeReRate_ = lapply(1 :  (nBlock * n),
-                     function(i) trial2sec(trialReRareMove_[[i]], trialEndTime_[[i]], tGrid))
-data.frame(value = unlist(timeReRate_), time = rep(tGrid, n * nBlock),
-           condition = factor(rep(blockData$condition, each = length(tGrid)),  levels = conditions)) %>%
-  group_by(condition, time) %>%
-  summarise(mean = mean(value), se = sd(value) / sqrt(length(value)), min = mean - se, max = mean + se) %>% 
-  ggplot(aes(time, mean, color = condition, fill = condition)) + 
-  geom_ribbon(aes(ymin=min, ymax=max), colour=NA, alpha = 0.3)+
-  geom_line(size = 1.5) + myTheme + scale_fill_manual(values = conditionColors) +
-  xlab("Elapsed time (s)") + ylab("Reward rate") +
-  scale_color_manual(values = conditionColors)
-ggsave("figures/expDataAnalysis/zTruc_reRate.png", width = 4, height = 3.5) 
 
+# plot longtermR
+data.frame(longtermR = as.vector(longtermR_), condition = rep(rep(c("LP", "HP"), each = nWindow), n), window = rep(1 : nWindow, n * nBlock)) %>%
+  group_by(condition, window) %>% 
+  summarise(muData = mean(longtermR, na.rm = T), seData = sd(longtermR, na.rm = T) / sqrt(sum(!is.na(longtermR))),
+            min = muData - seData, max = muData + seData) %>%
+  ggplot(aes(window, muData, color = condition, fill = condition)) + geom_line(size = 2) + 
+  geom_ribbon(aes(ymin=min, ymax=max), colour=NA, alpha = 0.3) + 
+  scale_color_manual(values = conditionColors) + scale_fill_manual(values = conditionColors)+
+  myTheme + xlab("Time (s)") + ylab("E(R) / E(T)") +
+    scale_x_continuous(labels = seq(1, 10, by = 2))
+ggsave("figures/expDataAnalysis/zTruc_longtermR.png", width = 5, height = 4) 
+
+data.frame(shorttermR= as.vector(shorttermR_), condition = rep(rep(c("LP", "HP"), each = nWindow), n), window = rep(1 : nWindow, n * nBlock)) %>%
+  group_by(condition, window) %>% summarise(muData = mean(shorttermR, na.rm = T),
+                                            seData = sd(shorttermR, na.rm = T) / sqrt(sum(!is.na(shorttermR))),
+                                            min = muData - seData, max = muData + seData) %>%
+  ggplot(aes(window, muData, color = condition, fill = condition)) + geom_line(size = 2) + 
+  geom_ribbon(aes(ymin=min, ymax=max), colour=NA, alpha = 0.3) + 
+  scale_color_manual(values = conditionColors) + scale_fill_manual(values = conditionColors)+
+  myTheme + xlab("Time (s)")  + ylab("E(R / T)") + scale_x_continuous(labels = seq(1, 10, by = 2))
+ggsave("figures/expDataAnalysis/zTruc_shorttermR.png", width = 5, height = 4) 
+
+  
 # plot LP AUC against HP AUC, to see adapation and correlation
 data.frame(HPAUC = blockData[blockData$condition == "HP", "AUC"],
            LPAUC = blockData[blockData$condition == "LP", "AUC"]) %>% 

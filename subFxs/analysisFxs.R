@@ -1,5 +1,6 @@
 # this script contains helper analysis functions 
 library(coin)
+load("wtwSettings.RData")
 # check the distribution of scheduled delays
 # ...as measured in number of key presses (for the instrumental version of the task)
 scheduledDelays <- function(blockData,label) {
@@ -46,7 +47,7 @@ trialPlots <- function(thisTrialData,label = " ") {
             aes(trialNum, trialDuration, color = condition)) +
     scale_color_manual(values = c('blue', 'red', 'black')) + 
     xlab('Trial') + ylab('Waiting duration (s)') + ggtitle(label) + myTheme
-  # add block lines if we have multiple blocks 
+  # add block lines if we have multiple  
   if(length(unique(thisTrialData$blockNum)) > 1){
     p = p + geom_vline(xintercept = c(nTrial1,nTrial1n2),  linetype='dashed',
                    color = "grey", size = 1)
@@ -256,7 +257,7 @@ getPartCorrelation = function(data){
   return(list(rhos = rhos, ps = ps))
 }
 
-# convert data of multiple blocks into one session
+# convert data of multiple  into one session
 block2session = function(tempt){
   nBlock = length(unique(tempt$blockNum))
   nTrials = sapply(1:nBlock, function(i) sum(tempt$blockNum == i))

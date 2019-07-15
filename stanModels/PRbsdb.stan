@@ -3,25 +3,28 @@ data {
   real wIni;
   int tMax;
   int nTimeSteps; // nTimeSteps = tMax / stepDuration
+  int nPara;
   
   // depending on each subject
   int N; // number of trials
   vector[N] timeWaited;
   vector[N] trialEarnings;
   int Ts[N]; // terminal time step index 
+  real stepDuration;
+  real iti;
+  real tokenValue;
+  vector[nPara] up;
+  vector[nPara] low;
 }
 transformed data {
-  // constant
-  real stepDuration = 1;
-  real iti = 2;
-  real tokenValue = 10;
   int totalSteps = sum(Ts) - N;
-  }
+}
 parameters {
-  real<lower = 0, upper = 0.3> phi;
-  real<lower = 2, upper = 22> tau;
-  real<lower = 0.7, upper = 1> gamma;
-  real<lower = 0, upper = nTimeSteps> zeroPoint; 
+  real<lower = low[1], upper = up[1]> phi;
+  real<lower = low[2], upper = up[2]> phiP; 
+  real<lower = low[3], upper = up[3]> tau;
+  real<lower = low[4], upper = up[4]> gamma;
+  real<lower = low[5], upper = up[5]> zeroPoint; 
 }
 transformed parameters{
   // initialize action values 
@@ -44,7 +47,6 @@ transformed parameters{
   // fill the first element of Qwaits, Quits and Vitis 
   Qwaits[,1] = Qwait;
   Qquits[1] = Qquit;
-  Vitis[1] = Viti;
  
   //loop over trial
   for(tIdx in 1 : (N -1)){
@@ -53,38 +55,46 @@ transformed parameters{
     real RT = trialEarnings[tIdx];
     
     // update action values for rewarded trials
-    if(trialEarnings[tIdx] > 0){
+    if(RT > 0){
       for(t in 1 : (T - 1)){
         real G = RT * gamma^(T - t -1) + Viti * gamma^(T - t);
         Qwait[t] = Qwait[t] + phi * (G - Qwait[t]);
       }
     }else{
-      real G =  RT  + Viti * gamma;
-      Qquit = Qquit + phi * (G - Qquit);
       if(T > 2){
         for(t in 1 : (T-2)){
-          G =  RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
-          Qwait[t] = Qwait[t] + phi * (G - Qwait[t]);          
+          real G =  RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
+          Qwait[t] = Qwait[t] + phiP * (G - Qwait[t]);    
         }
       }
     }
     // update Qquit by counterfactual thiking
     G1 =  RT  * gamma^(T - 2) + Viti * gamma^(T - 1);
-    Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+    if(RT > 0){
+      Qquit = Qquit + phi * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+    }else{
+      Qquit = Qquit + phiP * (G1 * gamma^(iti / stepDuration + 1) - Qquit);
+    }
+    
     // update Viti
-    Viti = Viti + phi * (G1 * gamma^(iti / stepDuration) - Viti);
+    if(RT > 0){
+       Viti = Viti + phi * (G1 * gamma^(iti / stepDuration) - Viti);
+    }else{
+       Viti = Viti + phiP * (G1 * gamma^(iti / stepDuration) - Viti);
+    }
+   
     
     // save action values
     Qwaits[,tIdx+1] = Qwait;
     Qquits[tIdx+1] = Qquit;
-    Vitis[tIdx + 1] = Viti;
   }// end of the loop
 }
 model {
-  phi ~ uniform(0, 0.3);
-  tau ~ uniform(2, 22);
-  gamma ~ uniform(0.7, 1);
-  zeroPoint ~ uniform(0, nTimeSteps);
+  phi ~ uniform(low[1], up[1]);
+  phiP ~ uniform(low[2], up[2]);
+  tau ~ uniform(low[3], up[3]);
+  gamma ~ uniform(low[4], up[4]);
+  zeroPoint ~ uniform(low[5], up[5]);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){

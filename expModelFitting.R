@@ -6,7 +6,7 @@ expModelFitting = function(modelName){
   dir.create(sprintf("genData/expModelFitting/%s", modelName))
   
   #load libraries
-  library('plyr'); library(dplyr); library(ggplot2);library('tidyr');library('rstan')
+  library('plyr'); library(dplyr); library(ggplot2);library('tidyr');
   library("loo")
   library("coda") 
   source('subFxs/modelFittingFxs.R') # for fitting each single participant
@@ -16,6 +16,7 @@ expModelFitting = function(modelName){
   load("wtwSettings.RData")
   
   #  set the environment for Rstan
+  library('rstan')
   options(warn=-1, message =-1) # run without this for one participant to chec everything
   Sys.setenv(USE_CXX14=1) # needed in local computeres
   rstan_options(auto_write = TRUE) 
@@ -50,12 +51,14 @@ expModelFitting = function(modelName){
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
     # excluded some trials
-    cond = unique(thisTrialData$condition)
-    cIdx = ifelse(cond == "HP", 1, 2)
-    excluedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
+    excluedTrialsHP = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
+                              thisTrialData$condition == "HP")
+    excluedTrialsLP = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[2]) &
+                              thisTrialData$condition == "LP")
+    excluedTrials = c(excluedTrialsHP, excluedTrialsLP)
     thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
-    thisTrialData = block2session(thisTrialData)
+    # thisTrialData = block2session(thisTrialData) not needed, since we only use timeWaited and trialEarnings
     fileName = sprintf("genData/expModelFitting/%s/s%s", modelName, thisID)
-    modelFitting(thisTrialData, fileName, paras, model)
+    modelFitting(thisTrialData, fileName, paras, model, modelName)
   }
 }

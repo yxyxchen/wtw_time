@@ -19,9 +19,9 @@ transformed data {
 parameters {
   real<lower = 0, upper = 0.3> phi;
   real<lower = 0, upper = 0.3> phiP; 
-  real<lower = 2, upper = 22> tau;
+  real<lower = 0.1, upper = 22> tau;
   real<lower = 0.7, upper = 1> gamma;
-  real<lower = 0, upper = nTimeSteps> zeroPoint; 
+  real<lower = 0, upper = 50> zeroPoint; 
 }
 transformed parameters{
   // initialize action values 
@@ -44,7 +44,6 @@ transformed parameters{
   // fill the first element of Qwaits, Quits and Vitis 
   Qwaits[,1] = Qwait;
   Qquits[1] = Qquit;
-  Vitis[1] = Viti;
  
   //loop over trial
   for(tIdx in 1 : (N -1)){
@@ -59,11 +58,9 @@ transformed parameters{
         Qwait[t] = Qwait[t] + phi * (G - Qwait[t]);
       }
     }else{
-      real G =  RT  + Viti * gamma;
-      Qquit = Qquit + phiP * (G - Qquit) * (G > Qquit) + phiP *  (G - Qquit) * (G <= Qquit) ;
       if(T > 2){
         for(t in 1 : (T-2)){
-          G =  RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
+          real G =  RT  * gamma^(T - t -1) + Viti * gamma^(T - t);
           Qwait[t] = Qwait[t] + phiP * (G - Qwait[t]);    
         }
       }
@@ -87,15 +84,14 @@ transformed parameters{
     // save action values
     Qwaits[,tIdx+1] = Qwait;
     Qquits[tIdx+1] = Qquit;
-    Vitis[tIdx + 1] = Viti;
   }// end of the loop
 }
 model {
   phi ~ uniform(0, 0.3);
   phiP ~ uniform(0, 0.3);
-  tau ~ uniform(2, 22);
+  tau ~ uniform(0.1, 22);
   gamma ~ uniform(0.7, 1);
-  zeroPoint ~ uniform(0, nTimeSteps);
+  zeroPoint ~ uniform(0, 50);
   
   // calculate the likelihood 
   for(tIdx in 1 : N){
