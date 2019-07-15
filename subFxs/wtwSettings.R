@@ -33,7 +33,7 @@ nseq = length(seqLP)
 optimWaitTimes = list(HP = 16, LP = seqLP[4])
 HP = tokenValue / ((2 + 16) / 2 + iti)
 LP = 0.5 * tokenValue / ((mean(seqLP[1:4]) + seqLP[4])/2 + iti)
-  
+optimRewardRates = c("HP" = HP, "LP" = LP) 
 save("conditions", "conditionColors", "tMaxs", "blockMins", "blockSecs", "iti", "tGrid", 
      "tokenValue", "stepDuration", "optimRewardRates", 
      "optimWaitTimes", "loseValue", "kmGrid", file = "wtwSettings.RData")

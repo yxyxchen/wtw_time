@@ -14,7 +14,7 @@ hdrData = allData$hdrData
 expTrialData = allData$trialData       
 allIDs = hdrData$ID 
 
-modelName = "RlearnL"
+modelName = "Rlearn"
 
 # create output directories
 dir.create("figures/expParaAnalysis")
@@ -31,7 +31,7 @@ nPara = length(paras)
 parentDir = "genData/expModelFitting"
 dirName = sprintf("%s/%sdb",parentDir, modelName)
 expPara= loadExpPara(paras, dirName)
-useID = factor(getUseID(tempt, paras), levels = levels(hdrData$ID))
+useID = factor(getUseID(expPara, paras), levels = levels(hdrData$ID))
 
 # plot hist 
 # paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")

@@ -63,57 +63,59 @@ expModelFitting = function(modelName){
     break
   }
   
-  # determine excID
-  expPara = loadExpPara(paras,
-                      sprintf("genData/expModelFitting/%sdb", modelName))
-  useID = factor(getUseID(expPara, paras), levels = levels(hdrData$ID))
-  excID = ids[!ids %in% useID]
-  
-  # loop over excID
-  n = length(excID)
-  if(n > 0){
-    text = sprintf("Start to refit %d participants", length(excID))
-    print(text)
-    foreach(i = 1 : n) %dopar% {
-      thisID = excID[[i]]
-      text = sprintf("refit s%d", thisID)
-      print(text)
-      # update nFits and converge
-      fitFile = sprintf("genData/expModelFitting/%sdb/afit_s%d.RData", modelName, thisID)
-      if(file.exists(fitFile)){
-        load(fitFile)
-        nFit = nFit  + 1
-        save(nFit, file = fitFile)
-      }else{
-        nFit = 2
-        save(nFit, file = fitFile)
-      }
-      
-      # prepare
-      thisTrialData = trialData[[thisID]]
-      # excluded some trials
-      excluedTrialsHP = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
-                                thisTrialData$condition == "HP")
-      excluedTrialsLP = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[2]) &
-                                thisTrialData$condition == "LP")
-      excluedTrials = c(excluedTrialsHP, excluedTrialsLP)
-      thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
-      # determine fileName
-      fileName = sprintf("genData/expModelFitting/%sdb/s%s", modelName, thisID)
-      # refit
-      # load upper and lower
-      tempt = read.csv(sprintf("genData/expModelFitting/%sdb/s%s_summary.txt", modelName, thisID),
-                       header = F)
-      low= tempt[1:nPara,4]
-      up = tempt[1 : nPara,8]
-      converge = modelFittingdb(thisTrialData, fileName, paras, model, modelName, nPara, low, up)
-    }# loop over participants
-    # evaluate useID again
+  # enter the refit stage
+  nLoop = 1
+  while(nLoop < 5){
+    # determine excID
     expPara = loadExpPara(paras,
                           sprintf("genData/expModelFitting/%sdb", modelName))
-    useID = getUseID(expPara, paras)
-    print(length(useID))
-  }else{
-    print("All converged!") # add later
+    useID = factor(getUseID(expPara, paras), levels = levels(hdrData$ID))
+    excID = ids[!ids %in% useID]
+    
+    # loop over excID
+    n = length(excID)
+    if(n > 0){
+      text = sprintf("Start to refit %d participants", length(excID))
+      print(text)
+      foreach(i = 1 : n) %dopar% {
+        thisID = excID[[i]]
+        text = sprintf("refit s%d", thisID)
+        print(text)
+        # update nFits and converge
+        fitFile = sprintf("genData/expModelFitting/%sdb/afit_s%d.RData", modelName, thisID)
+        if(file.exists(fitFile)){
+          load(fitFile); nFit = nFit  + 1; save(nFit, file = fitFile)
+        }else{
+          nFit = 2; save(nFit, file = fitFile)
+        }
+        
+        # prepare
+        thisTrialData = trialData[[thisID]]
+        # excluded some trials
+        excluedTrialsHP = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
+                                  thisTrialData$condition == "HP")
+        excluedTrialsLP = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[2]) &
+                                  thisTrialData$condition == "LP")
+        excluedTrials = c(excluedTrialsHP, excluedTrialsLP)
+        thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
+        # determine fileName
+        fileName = sprintf("genData/expModelFitting/%sdb/s%s", modelName, thisID)
+        # refit
+        # load upper and lower
+        tempt = read.csv(sprintf("genData/expModelFitting/%sdb/s%s_summary.txt", modelName, thisID),
+                         header = F)
+        low= tempt[1:nPara,4]
+        up = tempt[1 : nPara,8]
+        converge = modelFittingdb(thisTrialData, fileName, paras, model, modelName, nPara, low, up)
+      }# loop over participants
+      nLoop = nLoop + 1
+    }else{
+      break
+    }
   }
+  # evaluate useID again
+  expPara = loadExpPara(paras,
+                        sprintf("genData/expModelFitting/%sdb", modelName))
+  useID = getUseID(expPara, paras)
+  print(length(useID))
 }

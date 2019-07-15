@@ -88,7 +88,7 @@ reduce_gamma = function(paras, cond, scheduledWait){
   
   # initialize actionValues
   subOptimalRatio = 0.9
-  wIni = mean(as.double(optimRewardRates)) * stepDuration  * subOptimalRatio
+  wIni = mean(as.double(optimRewardRates)) * stepDuration / (1 - 0.9)  * subOptimalRatio
   
   Qquit = wIni; Viti = wIni 
   Qwait = zeroPoint*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit
@@ -500,7 +500,7 @@ PRbsNC = function(paras, cond, scheduledWait){
   
   # initialize actionValues
   subOptimalRatio = 0.9
-  wIni = mean(as.double(optimRewardRates)) * stepDuration  * subOptimalRatio
+  wIni = mean(as.double(optimRewardRates) ) * stepDuration / (1 - 0.9)  * subOptimalRatio
   
   Qquit = wIni; Viti = wIni 
   Qwait = zeroPoint*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit
@@ -601,7 +601,7 @@ PRbs = function(paras, cond, scheduledWait){
   
   # initialize actionValues
   subOptimalRatio = 0.9
-  wIni = mean(as.double(optimRewardRates)) * stepDuration  * subOptimalRatio
+  wIni = mean(as.double(optimRewardRates)) * stepDuration / (1 - 0.9)  * subOptimalRatio
   
   Qquit = wIni; Viti = wIni 
   Qwait = zeroPoint*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit

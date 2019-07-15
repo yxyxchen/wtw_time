@@ -26,7 +26,7 @@ allIDs = hdrData$ID
 
 
 # re-simulate data
-modelName = "PRbs"
+modelName = "RlearnL"
 dir.create("figures/expModelRepitation")
 dir.create(sprintf("figures/expModelRepitation/%s",modelName))
 thisRep = modelRepitation(modelName, summaryData, expTrialData, nComb) # set seeds indise
