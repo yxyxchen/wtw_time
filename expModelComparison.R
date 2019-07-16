@@ -61,7 +61,7 @@ ggsave("genData/expModelComparison/loo_nBest.png", width = 5, height =3.5)
 # extract logEvidence, cross validation
 modelNames = c("PRbs", "PRbsNC", "Rlearn", "RlearnL", "reduce_gamma")
 nModel = length(modelNames)
-ids = hdrData$ID[hdrData$stress == "no stress"]
+ids = hdrData$ID
 nSub = length(ids)
 nFold = 10
 logEvidence = matrix(nrow = length(ids), ncol= nModel) 
@@ -101,17 +101,25 @@ for(mIdx in 1 : nModel){
         LL_[f] = sum(sapply(1 : length(trials), function(i){
           trial = trials[i]
           if(trialEarnings[trial] > 0){
-            sum(log(lik_[1 : max(Ts[trial]-1, 1), trial]))
+            junk = log(lik_[1 : max(Ts[trial]-1, 1), trial])
+            junk[is.infinite(junk)] = -10000
+            sum(junk)
           }else{
-            sum(log(lik_[1:max(Ts[trial] - 2,1), trial])) + log(1-lik_[Ts[trial] - 1, trial])
+            junk = c(log(lik_[1:max(Ts[trial] - 2,1), trial]), log(1-lik_[Ts[trial] - 1, trial]))
+            junk[is.infinite(junk)] = -10000
+            sum(junk)
           }
         }))
         thisLogEvidenceTrain[f, sIdx] = sum(sapply(1 : length(trialsTrain), function(i){
           trial = trialsTrain[i]
           if(trialEarnings[trial] > 0){
-            sum(log(lik_[1 : max(Ts[trial]-1, 1), trial]))
+            junk = log(lik_[1 : max(Ts[trial]-1, 1), trial])
+            junk[is.infinite(junk)] = -10000
+            sum(junk)
           }else{
-            sum(log(lik_[1:max(Ts[trial] - 2,1), trial])) + log(1-lik_[Ts[trial] - 1, trial])
+            junk = c(log(lik_[1:max(Ts[trial] - 2,1), trial]), log(1-lik_[Ts[trial] - 1, trial]))
+            junk[is.infinite(junk)] = -10000
+            sum(junk)         
           }
         }))
           
@@ -129,4 +137,11 @@ output = data.frame(cvLik = logEvidence[select,],
                     AUC = blockData$AUC[blockData$id %in% useID], id = useID)
 f= "genData/expModelFitting/logEvidenceListCV.csv"
 write.table(file = f, output, sep = ",", col.names = F, row.names = F)
+bestNums = sapply(1 : nModel, function(i) sum(apply(logEvidence[,1:nModel], MARGIN = 1, FUN = function(x) which.max(x) == i)))
+data.frame(model = modelNames, bestNums = bestNums) %>%  ggplot(aes(x="", y=bestNums, fill=model)) +
+  geom_bar(width = 1, stat = "identity") + 
+  coord_polar("y", start=0) + ylab("") + xlab("") + ggtitle(sprintf("Participants best described (n = %d)", nUse))+ 
+  myTheme
+dir.create("genData/expModelComparison")
+ggsave("genData/expModelComparison/CV_nBest.png", width = 5, height =3.5)
 
