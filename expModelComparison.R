@@ -5,6 +5,7 @@ source("subFxs/helpFxs.R")
 source("subFxs/loadFxs.R")
 source("subFxs/modelComparisonFxs.R")
 source("subFxs/plotThemes.R")
+load("wtwSettings.RData")
 # load model names
 allData = loadAllData()
 hdrData = allData$hdrData           
@@ -14,7 +15,8 @@ n = length(allIDs)
 load("genData/expDataAnalysis/blockData.RData")
 # select common useID
 idList = hdrData$ID
-modelNames = c("PRbs", "PRbsNC", "Rlearn", "RlearnL", "reduce_gamma")
+modelNames = factor(c("PRbs", "PRbsNC", "Rlearn", "RlearnL", "reduce_gamma"),
+                    levels = c("PRbs", "PRbsNC","Rlearn", "RlearnL", "reduce_gamma"))
 nModel = length(modelNames)
 useID_ = vector(mode = "list", length = nModel)
 source("subFxs/loadFxs.R")
@@ -53,11 +55,19 @@ library("ggpubr")
 bestNums = sapply(1 : nModel, function(i) sum(apply(logEvidence_[,1:nModel], MARGIN = 1, FUN = function(x) which.max(x) == i)))
 data.frame(model = modelNames, bestNums = bestNums) %>%  ggplot(aes(x="", y=bestNums, fill=model)) +
   geom_bar(width = 1, stat = "identity") + 
-  coord_polar("y", start=0) + ylab("") + xlab("") + ggtitle(sprintf("Participants best described (n = %d)", nUse))+ 
+  coord_polar("y", start=0) + ylab("") + xlab("") + ggtitle(sprintf("Best described (n = %d)", nUse))+ 
   myTheme
-dir.create("genData/expModelComparison")
-ggsave("genData/expModelComparison/loo_nBest.png", width = 5, height =3.5)
+dir.create("figures/expModelComparison")
+ggsave("figures/expModelComparison/loo_nBest.png", width = 5, height =3.5)
 
+data.frame(pwaic = as.vector(pWaic_), model = rep(modelNames, each = nUse)) %>%
+  group_by(model) %>% ggplot(aes(model, pwaic)) + geom_boxplot() + myTheme
+ggsave("figures/expModelComparison/loo_pwaic.png", width = 5, height =3.5)
+
+data.frame(pwaic = as.vector(pWaic_), model = rep(modelNames, each = nUse)) %>%
+  group_by(model) %>% 
+  summarise(muData = mean(pwaic), seData = sd(pwaic) / sqrt(length(pwaic)),
+              minData = muData - seData, maxData = muData + seData) 
 # extract logEvidence, cross validation
 modelNames = c("PRbs", "PRbsNC", "Rlearn", "RlearnL", "reduce_gamma")
 nModel = length(modelNames)
@@ -76,11 +86,18 @@ for(mIdx in 1 : nModel){
     id = ids[sIdx]
     load(sprintf("genData/expModelFittingCV/split/s%d.RData", id))
     thisTrialData = trialData[[id]]
+    # excluded some trials
+    excluedTrialsHP = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
+                              thisTrialData$condition == "HP")
+    excluedTrialsLP = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[2]) &
+                              thisTrialData$condition == "LP")
+    excluedTrials = c(excluedTrialsHP, excluedTrialsLP)
+    thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
+    # prepare the data
     nTrial = length(thisTrialData$trialEarnings)
-    cond = unique(thisTrialData$condition)
-    tMax = ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+    cond = thisTrialData$cond
     trialEarnings = thisTrialData$trialEarnings
-    timeWaited = pmin(thisTrialData$timeWaited, tMax)
+    timeWaited = pmin(thisTrialData$timeWaited, max(tMaxs))
     Ts = round(ceiling(timeWaited / stepDuration) + 1)
     scheduledWait = thisTrialData$scheduledWait
     cvPara = loadCVPara(paras,
@@ -131,17 +148,15 @@ for(mIdx in 1 : nModel){
 }
 select = apply(sapply(1 : nModel, function(i) !is.na(logEvidence[,i])), MARGIN = 1, FUN = all)
 useID = ids[select]
-
-output = data.frame(cvLik = logEvidence[select,],
-                    cond = ifelse(blockData$condition[blockData$id %in% useID] == "HP", 1, 2),
-                    AUC = blockData$AUC[blockData$id %in% useID], id = useID)
+nUse = length(useID)
+output = data.frame(cvLik = logEvidence[select,])
 f= "genData/expModelFitting/logEvidenceListCV.csv"
 write.table(file = f, output, sep = ",", col.names = F, row.names = F)
 bestNums = sapply(1 : nModel, function(i) sum(apply(logEvidence[,1:nModel], MARGIN = 1, FUN = function(x) which.max(x) == i)))
 data.frame(model = modelNames, bestNums = bestNums) %>%  ggplot(aes(x="", y=bestNums, fill=model)) +
   geom_bar(width = 1, stat = "identity") + 
-  coord_polar("y", start=0) + ylab("") + xlab("") + ggtitle(sprintf("Participants best described (n = %d)", nUse))+ 
+  coord_polar("y", start=0) + ylab("") + xlab("") + ggtitle(sprintf("Best described (n = %d)", nUse))+ 
   myTheme
-dir.create("genData/expModelComparison")
-ggsave("genData/expModelComparison/CV_nBest.png", width = 5, height =3.5)
+dir.create("figures/expModelComparison")
+ggsave("figures/expModelComparison/CV_nBest.png", width = 5, height =3.5)
 

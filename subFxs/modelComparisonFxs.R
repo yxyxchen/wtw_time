@@ -36,15 +36,13 @@ PRbs = function(paras, cond, trialEarnings, timeWaited){
   
   # determine number of trials and nTimeSteps 
   nTrial = length(scheduledWait)
-  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  tMax= max(tMaxs)
   nTimeStep = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
   
   # initialize actionValues
   subOptimalRatio = 0.9
-  QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9) * subOptimalRatio
-  QLPApOptim = 0.93 * stepDuration / (1 - 0.9) * subOptimalRatio
-  wIni = (QHPApOptim + QLPApOptim)/ 2 
+  wIni = mean(as.double(optimRewardRates)) * stepDuration /(1 - 0.9) * subOptimalRatio
   
   Qquit = wIni; Viti = wIni 
   Qwait = zeroPoint*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit
@@ -105,7 +103,8 @@ PRbs = function(paras, cond, trialEarnings, timeWaited){
   
   outputs = list( 
     "lik_" = lik_,
-    "Qwaits" = Qwaits, "Qquits" = Qquits, "Gs" = Gs, "deltas" = deltas, "Vitis" = Vitis
+    "Qwaits" = Qwaits, "Qquits" = Qquits, "Gs" = Gs, "deltas" = deltas, "Vitis" = Vitis,
+    "cond" = cond
   )
   return(outputs)
 }
@@ -116,14 +115,12 @@ PRbsNC = function(thisParas, cond, trialEarnings, timeWaited){
   
   # determine number of trials and nTimeSteps 
   nTrial = length(scheduledWait)
-  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  tMax= max(tMaxs)
   nTimeStep = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
   # initialize actionValues
   subOptimalRatio = 0.9
-  QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9) * subOptimalRatio
-  QLPApOptim = 0.93 * stepDuration / (1 - 0.9) * subOptimalRatio
-  wIni = (QHPApOptim + QLPApOptim)/ 2 
+  wIni = mean(as.double(optimRewardRates)) * stepDuration / (1 - 0.9) * subOptimalRatio
   
   Qquit = wIni; Viti = wIni 
   Qwait = zeroPoint*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit
@@ -190,7 +187,8 @@ PRbsNC = function(thisParas, cond, trialEarnings, timeWaited){
   
   outputs = list( 
     "lik_" = lik_,
-    "Qwaits" = Qwaits, "Qquits" = Qquits, "Gs" = Gs, "deltas" = deltas, "Vitis" = Vitis
+    "Qwaits" = Qwaits, "Qquits" = Qquits, "Gs" = Gs, "deltas" = deltas, "Vitis" = Vitis,
+    "cond" = cond
   )
   return(outputs)
 }
@@ -201,15 +199,13 @@ Rlearn = function(thisParas, cond, trialEarnings, timeWaited){
   
   # determine number of trials and nTimeSteps 
   nTrial = length(scheduledWait)
-  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  tMax= max(tMaxs)
   nTimeStep = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
   
   # initialize actionValues
   subOptimalRatio = 0.9
-  QHPApOptim = 5 / 6 * stepDuration * subOptimalRatio
-  QLPApOptim = 0.93 * stepDuration * subOptimalRatio
-  wIni = (QHPApOptim + QLPApOptim)/ 2 
+  wIni = mean(as.double(optimRewardRates)) * stepDuration / (1 -0.9) * subOptimalRatio
   
   Qquit = 0; Viti = 0; reRate = wIni 
   Qwait = zeroPoint*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit
@@ -280,7 +276,7 @@ Rlearn = function(thisParas, cond, trialEarnings, timeWaited){
   outputs = list( 
     "lik_" = lik_,
     "Qwaits" = Qwaits, "Qquits" = Qquits, "Gs" = Gs, "deltas" = deltas,
-    "Vitis" = Vitis, "reRates" = reRates
+    "Vitis" = Vitis, "reRates" = reRates, "cond" = cond
   )
   return(outputs)
 }
@@ -293,14 +289,12 @@ RlearnL = function(thisParas, cond, trialEarnings, timeWaited){
   
   # determine number of trials and nTimeSteps 
   nTrial = length(scheduledWait)
-  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  tMax= max(tMaxs)
   nTimeStep = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
   # initialize actionValues
   subOptimalRatio = 0.9
-  QHPApOptim = 5 / 6 * stepDuration * subOptimalRatio
-  QLPApOptim = 0.93 * stepDuration * subOptimalRatio
-  wIni = (QHPApOptim + QLPApOptim)/ 2 
+  wIni = mean(as.double(optimRewardRates)) * stepDuration  * subOptimalRatio
   
   Qquit = 0; Viti = 0; reRate = wIni 
   Qwait = zeroPoint*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit
@@ -373,7 +367,7 @@ RlearnL = function(thisParas, cond, trialEarnings, timeWaited){
   outputs = list( 
     "lik_" = lik_,
     "Qwaits" = Qwaits, "Qquits" = Qquits, "Gs" = Gs, "deltas" = deltas,
-    "Vitis" = Vitis, "reRates" = reRates
+    "Vitis" = Vitis, "reRates" = reRates, "cond" = cond
   )
   return(outputs)
 }
@@ -385,14 +379,12 @@ reduce_gamma = function(thisParas, cond, trialEarnings, timeWaited){
   
   # determine number of trials and nTimeSteps 
   nTrial = length(scheduledWait)
-  tMax= ifelse(cond == "HP", tMaxs[1], tMaxs[2])
+  tMax= max(tMaxs)
   nTimeStep = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
   # initialize actionValues
   subOptimalRatio = 0.9
-  QHPApOptim = 5 / 6 * stepDuration / (1 - 0.9) * subOptimalRatio
-  QLPApOptim = 0.93 * stepDuration / (1 - 0.9) * subOptimalRatio
-  wIni = (QHPApOptim + QLPApOptim)/ 2 
+ wIni = mean(as.double(optimRewardRates)) * stepDuration / (1 - 0.9)  * subOptimalRatio
   
   Qquit = wIni; Viti = wIni 
   Qwait = zeroPoint*0.1 - 0.1*(0 : (nTimeStep - 1)) + Qquit
@@ -454,7 +446,8 @@ reduce_gamma = function(thisParas, cond, trialEarnings, timeWaited){
   
   outputs = list( 
     "lik_" = lik_,
-    "Qwaits" = Qwaits, "Qquits" = Qquits, "Gs" = Gs, "deltas" = deltas, "Vitis" = Vitis
+    "Qwaits" = Qwaits, "Qquits" = Qquits, "Gs" = Gs, "deltas" = deltas, "Vitis" = Vitis,
+    "cond" = cond
   )
   return(outputs)
 }
