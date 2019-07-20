@@ -68,8 +68,9 @@ data.frame(pwaic = as.vector(pWaic_), model = rep(modelNames, each = nUse)) %>%
   group_by(model) %>% 
   summarise(muData = mean(pwaic), seData = sd(pwaic) / sqrt(length(pwaic)),
               minData = muData - seData, maxData = muData + seData) 
+
 # extract logEvidence, cross validation
-modelNames = c("PRbs", "PRbsNC", "Rlearn", "RlearnL", "reduce_gamma")
+modelNames = c("QL1", "QL2", "RL1", "RL2", "BL")
 nModel = length(modelNames)
 ids = hdrData$ID
 nSub = length(ids)
@@ -80,7 +81,7 @@ for(mIdx in 1 : nModel){
   modelName = modelNames[mIdx]
   paras = getParas(modelName)
   nPara = length(paras)
-  logLikFun = getLogLikFun(modelName)
+  likFun = getLikFun(modelName)
   thisLogEvidenceTrain = matrix(nrow = nFold, ncol = nSub)
   for(sIdx in 1 : nSub){
     id = ids[sIdx]
@@ -113,8 +114,8 @@ for(mIdx in 1 : nModel){
         junk = 1 : nTrial
         trialsTrain = junk[!junk %in% trials]
         
-        thisParas = as.double(cvPara[f,1:nPara])
-        lik_ = logLikFun(thisParas, cond, trialEarnings, timeWaited)$lik_
+        paras = as.double(cvPara[f,1:nPara])
+        lik_ = logLikFun(paras, cond, trialEarnings, timeWaited)$lik_
         LL_[f] = sum(sapply(1 : length(trials), function(i){
           trial = trials[i]
           if(trialEarnings[trial] > 0){

@@ -22,7 +22,7 @@ expModelRepitation = function(modelName){
   # load trialData since we need scheduledWait 
   allData = loadAllData()
   hdrData = allData$hdrData 
-  expTrialData = allData$trialData       
+  trialData = allData$trialData       
   allIDs = hdrData$ID 
   
   
@@ -37,9 +37,9 @@ expModelRepitation = function(modelName){
   expPara = thisRep$expPara
   repTrialData = thisRep$repTrialData
   
-  paras = getParas(modelName)
+  paraNames = getParaNames(modelName)
   
-  useID = factor(getUseID(expPara, paras), levels = levels(hdrData$ID))
+  useID = factor(getUseID(expPara, paraNames), levels = levels(hdrData$ID))
   repNo = thisRep$repNo
   nSub =(length(useID))
   AUCRep_ = matrix(NA, nrow = nComb , ncol = nSub * nBlock)
@@ -54,7 +54,7 @@ expModelRepitation = function(modelName){
     label = sprintf("sub%d", id)
     kmOnGridMatrix = matrix(NA, nrow = length(kmGrid), ncol = nComb)
     for(cIdx in 1 : nComb){
-      thisRepTrialData = repTrialData[[repNo[cIdx, which(thisRep$useID == id)]]]
+      thisRepTrialData = repTrialData[[repNo[cIdx, which(ids == id)]]]
       for(bkIdx in 1 : 2){
         noIdx = sIdx * 2 - 2 + bkIdx
         startIdx = min(which(thisRepTrialData$cond == conditions[3 - bkIdx]))
@@ -152,7 +152,7 @@ expModelRepitation = function(modelName){
   # for(sIdx in 1 : nSub){
   #   thisID = idList[sIdx]
   #   if(thisID %in% useID){
-  #     para = as.double(expPara[sIdx, 1 : length(paras)])
+  #     para = as.double(expPara[sIdx, 1 : length(paraNames)])
   #     label = sprintf('Subject %s, %s, %s, LL = %.1f',thisID, hdrData$condition[sIdx], hdrData$stress[sIdx], expPara$LL_all[sIdx])
   #     label = paste(label, paste(round(para, 3), collapse = "", seq = " "))
   #     # prepara data 

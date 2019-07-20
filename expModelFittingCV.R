@@ -5,7 +5,7 @@
 splitExpData = function(){
   nFold = 10
   source('subFxs/loadFxs.R') # for load data
-  source("subFxs/helpFxs.R") # for getParas
+  source("subFxs/helpFxs.R") # for getparaNames
   load("wtwSettings.RData")
   dir.create("genData/expModelFittingCV")
   dir.create("genData/expModelFittingCV/split")
@@ -51,7 +51,7 @@ expModelFitting = function(modelName){
   library("coda") 
   source('subFxs/modelFittingFxs.R') # for fitting each single participant
   source('subFxs/loadFxs.R') # for load data
-  source("subFxs/helpFxs.R") # for getParas
+  source("subFxs/helpFxs.R") # for getparaNames
   load("wtwSettings.RData")
   source("subFxs/analysisFxs.R")
   
@@ -70,10 +70,10 @@ expModelFitting = function(modelName){
   idList = hdrData$ID                   
   n = length(idList)                    
   
-  # determine paras
-  paras = getParas(modelName)
-  if(paras == "wrong model name"){
-    print(paras)
+  # determine paraNames
+  paraNames = getParaNames(modelName)
+  if(paraNames == "wrong model name"){
+    print(paraNames)
     break
   }
   
@@ -90,12 +90,14 @@ expModelFitting = function(modelName){
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
     # excluded some trials
-    excluedTrialsHP = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
-                              thisTrialData$condition == "HP")
-    excluedTrialsLP = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[2]) &
-                              thisTrialData$condition == "LP")
-    excluedTrials = c(excluedTrialsHP, excluedTrialsLP)
+    excluedTrials1 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
+                             thisTrialData$condition == conditions[1])
+    excluedTrials2 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[2]) &
+                             thisTrialData$condition == conditions[2])
+    excluedTrials = c(excluedTrials1, excluedTrials2)
     thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
+    cond = thisTrialData$condition
+    scheduledWait = thisTrialData$scheduledWait
     # determine partitions 
     load(sprintf("genData/expModelFittingCV/split/s%d.RData", thisID))
     
@@ -104,7 +106,7 @@ expModelFitting = function(modelName){
       select = as.vector(partTable[-j,])
       thisTrialData = thisTrialData[(1 : nrow(thisTrialData)) %in% select,]
       fileName = sprintf("genData/expModelFittingCV/%s/s%d_f%d", modelName, thisID, j)
-      modelFittingCV(thisTrialData, fileName, paras, model, modelName)
+      modelFittingCV(thisTrialData, fileName, paraNames, model, modelName)
     }
   }
 }

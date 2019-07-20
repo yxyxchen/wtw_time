@@ -1,20 +1,21 @@
 data {
+  // depending on the task
+  real stepDuration;
+  real iti;
+  
   // depending on the condition
   real wIni;
-  int tMax;
   int nTimeSteps; // nTimeSteps = tMax / stepDuration
-  int nPara;
   
   // depending on each subject
   int N; // number of trials
-  vector[N] timeWaited;
   vector[N] trialEarnings;
   int Ts[N]; // terminal time step index 
-  real stepDuration;
-  real iti;
-  real tokenValue;
-  vector[nPara] up;
+  
+  // debug
+  int nPara;
   vector[nPara] low;
+  vector[nPara] up;
 }
 transformed data {
   int totalSteps = sum(Ts) - N;
@@ -23,32 +24,34 @@ parameters {
   real<lower = low[1], upper = up[1]> phi;
   real<lower = low[2], upper = up[2]> phiP; 
   real<lower = low[3], upper = up[3]> tau;
-  real<lower = low[4], upper = up[4]> zeroPoint; 
+  real<lower = low[4], upper = up[4]> prior; 
+  real<lower = low[5], upper = up[5]> beta;
+  real<lower = low[6], upper = up[6]> betaP;   
 }
 transformed parameters{
   // initialize action values 
-  // especially for this version use 0.9, original 1
-  real Qquit = 0;
   real Viti = 0;
-  real reRate = wIni;
+  real reRate = wIni;// reward rate for each step
   vector[nTimeSteps] Qwait;
-    // initialize variables to record action values 
+  
+  // initialize variables to record action values 
   matrix[nTimeSteps, N] Qwaits = rep_matrix(0, nTimeSteps, N);
-  vector[N] Qquits = rep_vector(0, N);
-
+  vector[N] Vitis = rep_vector(0, N);
+  vector[N] reRates = rep_vector(0, N);
+  
   // initialize caching variables
   real G1;
   real delta;
-  // fill values
+  
+  // enter the initial values
   for(i in 1 : nTimeSteps){
-    Qwait[i] = zeroPoint*0.1 - 0.1*(i - 1) + Qquit;
+    Qwait[i] = prior*0.1 - 0.1*(i - 1) + Viti;
   }
-  
-  // fill the first element of Qwaits, Quits and Vitis 
   Qwaits[,1] = Qwait;
-  Qquits[1] = Qquit;
+  Vitis[1] = Viti;
+  reRates[1] = reRate;
   
-  //loop over trial
+  //loop over trials
   for(tIdx in 1 : (N -1)){
     // determine the termial timestep T 
     int T = Ts[tIdx];
@@ -68,15 +71,9 @@ transformed parameters{
         }
       }
     }
-    // update Qquit by counterfactual thiking
-    G1 =  RT  - reRate*(T - 1) + Viti;
-    if(RT > 0){
-      Qquit = Qquit + phi * (G1 - reRate * (iti / stepDuration + 1) - Qquit);
-    }else{
-      Qquit = Qquit + phiP * (G1 - reRate * (iti / stepDuration + 1) - Qquit);
-    }
     
     // update Viti
+    G1 =  RT  - reRate*(T - 1) + Viti;
     delta = (G1 - reRate * (iti / stepDuration) - Viti);
     if(RT > 0){
        Viti = Viti + phi * delta;
@@ -86,22 +83,25 @@ transformed parameters{
    
     // update reRate 
     if(RT > 0){
-      reRate = reRate +  phi * delta;
+      reRate = reRate +  beta * delta;
     }else{
-      reRate = reRate + phiP * delta;
+      reRate = reRate + betaP * delta;
     }
     
     // save action values
     Qwaits[,tIdx+1] = Qwait;
-    Qquits[tIdx+1] = Qquit;
+    Vitis[tIdx+1] = Viti;
+    reRates[tIdx + 1] = reRate;
+    
   }// end of the loop
 }
 model {
   phi ~ uniform(low[1], up[1]);
   phiP ~ uniform(low[2], up[2]);
   tau ~ uniform(low[3], up[3]);
-  zeroPoint ~ uniform(low[4], up[4]);
-  
+  prior ~ uniform(low[4], up[4]);
+  beta ~ uniform(low[5], up[5]);
+  betaP ~ uniform(low[6], up[6]);  
   // calculate the likelihood 
   for(tIdx in 1 : N){
     int action;
@@ -114,7 +114,7 @@ model {
         action = 1; // wait
       }
       values[1] = Qwaits[i, tIdx] * tau;
-      values[2] = Qquits[tIdx] * tau;
+      values[2] = (Vitis[tIdx] - reRates[tIdx]) * tau;
       //action ~ categorical_logit(values);
       target += categorical_logit_lpmf(action | values);
     } 
@@ -137,7 +137,7 @@ generated quantities {
         action = 1; // wait
       }
       values[1] = Qwaits[i, tIdx] * tau;
-      values[2] = Qquits[tIdx] * tau;
+      values[2] = (Vitis[tIdx] - reRates[tIdx]) * tau;
       log_lik[no] =categorical_logit_lpmf(action | values);
       no = no + 1;
     }
