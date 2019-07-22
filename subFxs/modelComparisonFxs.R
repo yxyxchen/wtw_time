@@ -294,6 +294,12 @@ RL2 = function(paras, cond, trialEarnings, timeWaited){
 BL = function(paras, cond, trialEarnings, timeWaited){
   # parse para
   pWait = paras[1];
+  
+  # prepare inputs
+  nTrial = length(scheduledWait)
+  tMax= max(tMaxs)
+  nTimeStep = tMax / stepDuration
+  Ts = round(ceiling(timeWaited / stepDuration) + 1)
   # calculate likelyhood
   lik_ = matrix(pWait, nrow = nTimeStep, ncol = nTrial)
   # return outputs

@@ -38,13 +38,14 @@ modelRepitation = function(modelName, summaryData, trialData,  nComb){
     excluedTrials2 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[2]) &
                               thisTrialData$condition == conditions[2])
     excluedTrials = c(excluedTrials1, excluedTrials2)
-    thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
-    cond = thisTrialData$condition
+    thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials &
+                                    thisTrialData$blockNum <= 2,]
+    condtion = thisTrialData$condition
     scheduledWait = thisTrialData$scheduledWait
     # simulate nComb times
     for(cbIdx in 1 : nComb){
       paras = as.double(paras_[sample(1 : nrow(paras_), 1), 1 : length(paraNames)])
-      tempt = repFun(paras, cond, scheduledWait)
+      tempt = repFun(paras, condtion, scheduledWait)
       repTrialData[[repNo[cbIdx, sIdx]]] = tempt
     }
   }
@@ -53,7 +54,7 @@ modelRepitation = function(modelName, summaryData, trialData,  nComb){
 }
 
 
-QL1 = function(paras, cond, scheduledWait){
+QL1 = function(paras, condtion, scheduledWait){
   # parse paras
   phi = paras[1]; tau = paras[2]; gamma = paras[3]; prior = paras[4]
   
@@ -134,12 +135,12 @@ QL1 = function(paras, cond, scheduledWait){
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
     "sellTime" = sellTime, "scheduledWait" = scheduledWait,
     "Qwaits" = Qwaits, "targets" = targets, "deltas" = deltas,
-    "Vitis" = Vitis, "cond" = cond
+    "Vitis" = Vitis, "condtion" = condtion
   )
   return(outputs)
 }
 
-QL2 = function(paras, cond, scheduledWait){
+QL2 = function(paras, condtion, scheduledWait){
   # parse paras
   phi = paras[1]; phiP = paras[2]; tau = paras[3]; gamma = paras[4]; prior = paras[5]
   
@@ -220,14 +221,14 @@ QL2 = function(paras, cond, scheduledWait){
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
     "sellTime" = sellTime, "scheduledWait" = scheduledWait,
     "Qwaits" = Qwaits, "targets" = targets, "deltas" = deltas,
-    "Vitis" = Vitis, "cond" = cond
+    "Vitis" = Vitis, "condtion" = condtion
   )
   return(outputs)
 }
 
-RL1 = function(paras, cond, scheduledWait){
+RL1 = function(paras, condtion, scheduledWait){
   # parse para
-  phi = paras[1]; tau = paras[3]; prior = paras[4]; beta = paras[6]
+  phi = paras[1]; tau = paras[2]; prior = paras[3]; beta = paras[4]
   
   # prepare inputs
   nTrial = length(scheduledWait)
@@ -259,7 +260,7 @@ RL1 = function(paras, cond, scheduledWait){
     thisScheduledWait = scheduledWait[tIdx]
     while(t <= nTimeStep){
       # determine At
-      pWait =  1 / sum(1  + exp((Viti * gamma - Qwait[t])* tau))
+      pWait =  1 / sum(1  + exp((Viti -reRate - Qwait[t])* tau))
       action = ifelse(runif(1) < pWait, 'wait', 'quit')
       # observe St+1 and Rt+1
       rewardOccur = thisScheduledWait <= (t * stepDuration) && thisScheduledWait > ((t-1) * stepDuration)
@@ -290,14 +291,14 @@ RL1 = function(paras, cond, scheduledWait){
         if(T > 2){
           targets[1 : (T-2), tIdx] = returns[1 : (T-2)]
           deltas[1 : (T-2), tIdx] = returns[1 : (T-2)] - Qwait[1 : (T-2)]
-          Qwait[1 : (T-2)] = Qwait[1 : (T-2)] + phiP*(returns[1 : (T-2)] - Qwait[1 : (T-2)])
+          Qwait[1 : (T-2)] = Qwait[1 : (T-2)] + phi*(returns[1 : (T-2)] - Qwait[1 : (T-2)])
         }
       }
       # update Viti
       delta = (returns[1] - reRate * (iti / stepDuration) - Viti)
       Viti = Viti + phi * delta
       # update reRate 
-      reRate = reRate + phi * delta  
+      reRate = reRate + beta * delta  
       # record updated values
       Qwaits[,tIdx + 1] = Qwait
       Vitis[tIdx + 1] = Viti
@@ -310,12 +311,12 @@ RL1 = function(paras, cond, scheduledWait){
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
     "sellTime" = sellTime, "scheduledWait" = scheduledWait,
     "Qwaits" = Qwaits, "targets" = targets, "deltas" = deltas,
-    "Vitis" = Vitis, "reRates" = reRates
+    "Vitis" = Vitis, "reRates" = reRates, "condtion" = condtion
   )
   return(outputs)
 }
 
-RL2 = function(paras, cond, scheduledWait){
+RL2 = function(paras, condtion, scheduledWait){
   # parse para
   phi = paras[1]; phiP = paras[2]; tau = paras[3]; prior = paras[4]
   beta = paras[5]; betaP = paras[6]
@@ -350,7 +351,7 @@ RL2 = function(paras, cond, scheduledWait){
     thisScheduledWait = scheduledWait[tIdx]
     while(t <= nTimeStep){
       # determine At
-      pWait =  1 / sum(1  + exp((Viti * gamma - Qwait[t])* tau))
+      pWait =  1 / sum(1  + exp((Viti -reRate - Qwait[t])* tau))
       action = ifelse(runif(1) < pWait, 'wait', 'quit')
       # observe St+1 and Rt+1
       rewardOccur = thisScheduledWait <= (t * stepDuration) && thisScheduledWait > ((t-1) * stepDuration)
@@ -388,7 +389,7 @@ RL2 = function(paras, cond, scheduledWait){
       delta = (returns[1] - reRate * (iti / stepDuration) - Viti)
       Viti = ifelse(nextReward > 0, Viti + phi * delta, Viti + phiP* delta)
       # update reRate 
-      reRate = ifelse(nextReward > 0, reRate + phi * delta, reRate + phiP* delta)   
+      reRate = ifelse(nextReward > 0, reRate + beta * delta, reRate + betaP* delta)   
       # record updated values
       Qwaits[,tIdx + 1] = Qwait
       Vitis[tIdx + 1] = Viti
@@ -401,12 +402,12 @@ RL2 = function(paras, cond, scheduledWait){
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
     "sellTime" = sellTime, "scheduledWait" = scheduledWait,
     "Qwaits" = Qwaits, "targets" = targets, "deltas" = deltas,
-    "Vitis" = Vitis, "reRates" = reRates, "cond" = cond
+    "Vitis" = Vitis, "reRates" = reRates, "condtion" = condtion
   )
   return(outputs)
 }
 
-BL = function(paras, cond, scheduledWait){
+BL = function(paras, condtion, scheduledWait){
   # parse 
   pWait = paras[1]
   
@@ -449,7 +450,7 @@ BL = function(paras, cond, scheduledWait){
   # return outputs
   outputs = list( 
     "trialNum" = 1 : nTrial, "trialEarnings" = trialEarnings, "timeWaited" = timeWaited,
-    "sellTime" = sellTime, "scheduledWait" = scheduledWait, "cond" = cond
+    "sellTime" = sellTime, "scheduledWait" = scheduledWait, "condtion" = condtion
   )
   return(outputs)
 }

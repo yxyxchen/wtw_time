@@ -1,6 +1,8 @@
 # libraries and scripts
 library("stringr")
 library("ggplot2")
+library("dplyr")
+library("tidyr")
 source("subFxs/helpFxs.R")
 source("subFxs/loadFxs.R")
 source("subFxs/modelComparisonFxs.R")
@@ -15,16 +17,16 @@ n = length(allIDs)
 load("genData/expDataAnalysis/blockData.RData")
 # select common useID
 idList = hdrData$ID
-modelNames = factor(c("PRbs", "PRbsNC", "Rlearn", "RlearnL", "reduce_gamma"),
-                    levels = c("PRbs", "PRbsNC","Rlearn", "RlearnL", "reduce_gamma"))
+modelNames = factor(c("QL1", "QL2", "RL1", "RL2", "BL"),
+                    levels = c("QL1", "QL2", "RL1", "RL2", "BL"))
 nModel = length(modelNames)
 useID_ = vector(mode = "list", length = nModel)
 source("subFxs/loadFxs.R")
 for(i in 1 : nModel){
   modelName = modelNames[i]
-  paras = getParas(modelName)
-  expPara = loadExpPara(paras, sprintf("genData/expModelFitting/%sdb", modelName))
-  useID_[[i]] = factor(getUseID(expPara, paras), levels = levels(hdrData$ID))
+  paraNames = getParaNames(modelName)
+  expPara = loadExpPara(paraNames, sprintf("genData/expModelFitting/%sdb", modelName))
+  useID_[[i]] = factor(getUseID(expPara, paraNames), levels = levels(hdrData$ID))
 }
 useID = idList[apply(sapply(1 : nModel, function(i )idList %in% useID_[[i]]), MARGIN = 1,
               all)]
@@ -70,7 +72,8 @@ data.frame(pwaic = as.vector(pWaic_), model = rep(modelNames, each = nUse)) %>%
               minData = muData - seData, maxData = muData + seData) 
 
 # extract logEvidence, cross validation
-modelNames = c("QL1", "QL2", "RL1", "RL2", "BL")
+modelNames = factor(c("QL1", "QL2", "RL1", "RL2", "BL"),
+                    levels = c("QL1", "QL2", "RL1", "RL2", "BL"))
 nModel = length(modelNames)
 ids = hdrData$ID
 nSub = length(ids)
@@ -79,8 +82,8 @@ logEvidence = matrix(nrow = length(ids), ncol= nModel)
 logEvidenceTrain = list(length = nModel)
 for(mIdx in 1 : nModel){
   modelName = modelNames[mIdx]
-  paras = getParas(modelName)
-  nPara = length(paras)
+  paraNames = getParaNames(modelName)
+  nPara = length(paraNames)
   likFun = getLikFun(modelName)
   thisLogEvidenceTrain = matrix(nrow = nFold, ncol = nSub)
   for(sIdx in 1 : nSub){
@@ -101,12 +104,12 @@ for(mIdx in 1 : nModel){
     timeWaited = pmin(thisTrialData$timeWaited, max(tMaxs))
     Ts = round(ceiling(timeWaited / stepDuration) + 1)
     scheduledWait = thisTrialData$scheduledWait
-    cvPara = loadCVPara(paras,
+    cvPara = loadCVPara(paraNames,
                       sprintf("genData/expModelFittingCV/%sdb",modelName),
                       pattern = sprintf("s%d_f[0-9]{1,2}_summary.txt", id))
     # initialize 
     LL_ = vector(length = nFold)
-    if(length(getUseID(cvPara, paras)) == 10){
+    if(length(getUseID(cvPara, paraNames)) == 10){
       for(f in 1 : nFold){
         # determine training end testing trials
         trials = partTable[f,]
@@ -115,7 +118,7 @@ for(mIdx in 1 : nModel){
         trialsTrain = junk[!junk %in% trials]
         
         paras = as.double(cvPara[f,1:nPara])
-        lik_ = logLikFun(paras, cond, trialEarnings, timeWaited)$lik_
+        lik_ = likFun(paras, cond, trialEarnings, timeWaited)$lik_
         LL_[f] = sum(sapply(1 : length(trials), function(i){
           trial = trials[i]
           if(trialEarnings[trial] > 0){
@@ -153,6 +156,7 @@ nUse = length(useID)
 output = data.frame(cvLik = logEvidence[select,])
 f= "genData/expModelFitting/logEvidenceListCV.csv"
 write.table(file = f, output, sep = ",", col.names = F, row.names = F)
+
 bestNums = sapply(1 : nModel, function(i) sum(apply(logEvidence[,1:nModel], MARGIN = 1, FUN = function(x) which.max(x) == i)))
 data.frame(model = modelNames, bestNums = bestNums) %>%  ggplot(aes(x="", y=bestNums, fill=model)) +
   geom_bar(width = 1, stat = "identity") + 

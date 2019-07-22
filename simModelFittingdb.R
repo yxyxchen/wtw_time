@@ -27,12 +27,10 @@ expModelFitting = function(modelName){
   # compile the stan model 
   model = stan_model(file = sprintf("stanModels/%s.stan", paste(modelName, "db", sep = "")))
   
-  # load expData
-  allData = loadAllData()
-  hdrData = allData$hdrData           
-  trialData = allData$trialData       
-  ids = hdrData$ID            
-  nSub = length(ids)                    
+  # load simData
+  load("genData/simulation/simTrialData.RData")
+  idList = hdrData$ID
+  n = length(idList)                    
   
   originalFile = sprintf("genData/expModelFitting/%s", modelName)
   dbFile = sprintf("genData/expModelFitting/%sdb", modelName)
@@ -86,13 +84,6 @@ expModelFitting = function(modelName){
         
         # prepare
         thisTrialData = trialData[[thisID]]
-        # excluded some trials
-        excluedTrials1 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
-                                 thisTrialData$condition == conditions[1])
-        excluedTrials2 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[2]) &
-                                 thisTrialData$condition == conditions[2])
-        excluedTrials = c(excluedTrials1, excluedTrials2)
-        thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
         cond = thisTrialData$condition
         scheduledWait = thisTrialData$scheduledWait
         # determine fileName

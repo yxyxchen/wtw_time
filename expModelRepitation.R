@@ -23,13 +23,13 @@ expModelRepitation = function(modelName){
   allData = loadAllData()
   hdrData = allData$hdrData 
   trialData = allData$trialData       
-  allIDs = hdrData$ID 
+  ids = hdrData$ID 
   
   
   # re-simulate data
   dir.create("figures/expModelRepitation")
   dir.create(sprintf("figures/expModelRepitation/%s",modelName))
-  thisRep = modelRepitation(modelName, summaryData, expTrialData, nComb) # set seeds indise
+  thisRep = modelRepitation(modelName, summaryData, trialData, nComb) # set seeds indise
   
   
   
@@ -173,3 +173,4 @@ expModelRepitation = function(modelName){
   # 
   
 }
+
