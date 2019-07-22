@@ -61,7 +61,7 @@ modelFittingCV = function(thisTrialData, fileName, paraNames, model, modelName){
   load("wtwSettings.RData")
   # simulation parameters
   nChain = 4
-  nIter = 100
+  nIter = 5000
   
   # determine wIni, the first change
   subOptimalRatio = 0.9 
@@ -91,6 +91,16 @@ modelFittingCV = function(thisTrialData, fileName, paraNames, model, modelName){
                     stepDuration = stepDuration)
   fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
                  iter = nIter) 
+  
+  # extract parameters
+  extractedPara = fit %>%
+    rstan::extract(permuted = F, pars = c(paraNames, "LL_all"))
+  # save sampling sequences
+  tempt = extractedPara %>%
+    adply(2, function(x) x) %>%  # change arrays into 2-d dataframe 
+    dplyr::select(-chains) 
+  write.table(matrix(unlist(tempt), ncol = length(paraNames) + 1), file = sprintf("%s.txt", fileName), sep = ",",
+              col.names = F, row.names=FALSE) 
   
   fitSummary <- summary(fit,pars = c(paraNames, "LL_all"), use_cache = F)$summary
   write.table(matrix(fitSummary, nrow = length(paraNames) + 1), file = sprintf("%s_summary.txt", fileName),  sep = ",",

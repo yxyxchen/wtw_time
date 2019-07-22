@@ -14,12 +14,12 @@ splitExpData = function(){
   allData = loadAllData()
   hdrData = allData$hdrData           
   trialData = allData$trialData       
-  idList = hdrData$ID                   
-  n = length(idList)                    
+  ids = hdrData$ID                   
+  n = length(ids)                    
   
   set.seed(123)
   for(i in 1 : n){
-    thisID = idList[[i]]
+    thisID = ids[[i]]
     thisTrialData = trialData[[thisID]]
     # excluded some trials
     excluedTrialsHP = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
@@ -68,8 +68,8 @@ expModelFitting = function(modelName){
   allData = loadAllData()
   hdrData = allData$hdrData           
   trialData = allData$trialData       
-  idList = hdrData$ID                   
-  n = length(idList)                    
+  ids = hdrData$ID                   
+  n = length(ids)                    
   
   # determine paraNames
   paraNames = getParaNames(modelName)
@@ -88,7 +88,7 @@ expModelFitting = function(modelName){
   
   set.seed(123)
   foreach(i = 1 : n) %dopar% {
-    thisID = idList[[i]]
+    thisID = ids[[i]]
     thisTrialData = trialData[[thisID]]
     # excluded some trials
     excluedTrials1 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
