@@ -29,8 +29,8 @@ expModelFitting = function(modelName){
   
   # load simData
   load("genData/simulation/simTrialData.RData")
-  idList = hdrData$ID
-  n = length(idList)                    
+  ids = hdrData$ID
+  nSub = length(ids)                    
   
   originalFile = sprintf("genData/simModelFitting/%s", modelName)
   dbFile = sprintf("genData/simModelFitting/%sdb", modelName)

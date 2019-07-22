@@ -19,11 +19,11 @@ expModelRepitation = function(modelName){
   load("genData/expDataAnalysis/blockData.RData")
   load("genData/expDataAnalysis/kmOnGridBlock.RData")
   summaryData = blockData
-  # load trialData since we need scheduledWait 
-  allData = loadAllData()
-  hdrData = allData$hdrData 
-  trialData = allData$trialData       
-  ids = hdrData$ID 
+  
+  # load simData
+  load("genData/simulation/simTrialData.RData")
+  idList = hdrData$ID
+  n = length(idList)   
   
   
   # re-simulate data
