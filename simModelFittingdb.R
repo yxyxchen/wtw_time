@@ -32,8 +32,8 @@ expModelFitting = function(modelName){
   idList = hdrData$ID
   n = length(idList)                    
   
-  originalFile = sprintf("genData/expModelFitting/%s", modelName)
-  dbFile = sprintf("genData/expModelFitting/%sdb", modelName)
+  originalFile = sprintf("genData/simModelFitting/%s", modelName)
+  dbFile = sprintf("genData/simModelFitting/%sdb", modelName)
   if(!file.exists(dbFile)){
     dir.create(dbFile)
     allFiles = list.files(path = originalFile)
@@ -61,7 +61,7 @@ expModelFitting = function(modelName){
   while(nLoop < 15){
     # determine excID
     expPara = loadExpPara(paraNames,
-                          sprintf("genData/expModelFitting/%sdb", modelName))
+                          sprintf("genData/simModelFitting/%sdb", modelName))
     useID = factor(getUseID(expPara, paraNames), levels = levels(hdrData$ID))
     excID = ids[!ids %in% useID]
     
@@ -75,7 +75,7 @@ expModelFitting = function(modelName){
         text = sprintf("refit s%d", thisID)
         print(text)
         # update nFits and converge
-        fitFile = sprintf("genData/expModelFitting/%sdb/afit_s%d.RData", modelName, thisID)
+        fitFile = sprintf("genData/simModelFitting/%sdb/afit_s%d.RData", modelName, thisID)
         if(file.exists(fitFile)){
           load(fitFile); nFit = nFit  + 1; save(nFit, file = fitFile)
         }else{
@@ -83,14 +83,14 @@ expModelFitting = function(modelName){
         }
         
         # prepare
-        thisTrialData = trialData[[thisID]]
+        thisTrialData = simTrialData[[thisID]]
         cond = thisTrialData$condition
         scheduledWait = thisTrialData$scheduledWait
         # determine fileName
-        fileName = sprintf("genData/expModelFitting/%sdb/s%s", modelName, thisID)
+        fileName = sprintf("genData/simModelFitting/%sdb/s%s", modelName, thisID)
         # refit
         # load upper and lower
-        tempt = read.csv(sprintf("genData/expModelFitting/%sdb/s%s_summary.txt", modelName, thisID),
+        tempt = read.csv(sprintf("genData/simModelFitting/%sdb/s%s_summary.txt", modelName, thisID),
                          header = F)
         low= tempt[1:nPara,4]
         up = tempt[1 : nPara,8]
@@ -103,7 +103,7 @@ expModelFitting = function(modelName){
   }
   # evaluate useID again
   expPara = loadExpPara(paraNames,
-                        sprintf("genData/expModelFitting/%sdb", modelName))
+                        sprintf("genData/simModelFitting/%sdb", modelName))
   useID = getUseID(expPara, paraNames)
   print("finish")
   print(modelName)
