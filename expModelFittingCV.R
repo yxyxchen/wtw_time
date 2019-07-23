@@ -30,9 +30,10 @@ splitExpData = function(){
     thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials &
                                     thisTrialData$blockNum <= 2,]
     # determine partitions 
-    nPart = ceiling(nrow(thisTrialData) / nFold)
-    partTable = sapply(1 : nPart, function(i) sample(1:nFold,replace = FALSE) + (i -1) * nFold)
-    fileName = sprintf("genData/expModelFittingCV/split/s%d.RData",  thisID)
+    nSkip = 5
+    nPart = ceiling((nrow(thisTrialData) - nSkip)/ nFold)
+    partTable = sapply(1 : nPart, function(i) sample(1:nFold,replace = FALSE) + (i -1) * nFold + nSkip)
+    fileName = sprintf("genData/expModelFittingCV/split/s%s.RData",  thisID)
     save("partTable", file = fileName)
   }
 }
@@ -87,27 +88,24 @@ expModelFitting = function(modelName){
   registerDoMC(nCore)
   
   set.seed(123)
-  foreach(i = 1 : n) %dopar% {
-    thisID = ids[[i]]
-    thisTrialData = trialData[[thisID]]
-    # excluded some trials
-    excluedTrials1 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
-                             thisTrialData$condition == conditions[1])
-    excluedTrials2 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[2]) &
-                             thisTrialData$condition == conditions[2])
-    excluedTrials = c(excluedTrials1, excluedTrials2)
-    thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
-    cond = thisTrialData$condition
-    scheduledWait = thisTrialData$scheduledWait
-    # determine partitions 
-    load(sprintf("genData/expModelFittingCV/split/s%d.RData", thisID))
-    
-    # loop
-    for(j in 1 : nFold){
-      select = as.vector(partTable[-j,])
+  foreach(i = 1 : 2) %:% 
+    foreach (j = 1 : nFold) %dopar% {
+      thisID = ids[[i]]
+      thisTrialData = trialData[[thisID]]
+      # excluded some trials
+      excluedTrials1 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
+                               thisTrialData$condition == conditions[1])
+      excluedTrials2 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[2]) &
+                               thisTrialData$condition == conditions[2])
+      excluedTrials = c(excluedTrials1, excluedTrials2)
+      thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
+      cond = thisTrialData$condition
+      scheduledWait = thisTrialData$scheduledWait
+      # determine partitions 
+      load(sprintf("genData/expModelFittingCV/split/s%s.RData", thisID))
+      select = c(1 : 5, as.vector(partTable[-j,]))
       thisTrialData = thisTrialData[(1 : nrow(thisTrialData)) %in% select,]
-      fileName = sprintf("genData/expModelFittingCV/%s/s%d_f%d", modelName, thisID, j)
+      fileName = sprintf("genData/expModelFittingCV/%s/s%s_f%d", modelName, thisID, j)
       modelFittingCV(thisTrialData, fileName, paraNames, model, modelName)
     }
-  }
 }
