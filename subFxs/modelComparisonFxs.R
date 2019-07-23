@@ -16,7 +16,7 @@ QL1 = function(paras, cond, trialEarnings, timeWaited){
   phi = paras[1]; tau = paras[2]; gamma = paras[3]; prior = paras[4]
   
   # prepare inputs
-  nTrial = length(scheduledWait)
+  nTrial = length(trialEarnings)
   tMax= max(tMaxs)
   nTimeStep = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
@@ -296,7 +296,7 @@ BL = function(paras, cond, trialEarnings, timeWaited){
   pWait = paras[1];
   
   # prepare inputs
-  nTrial = length(scheduledWait)
+  nTrial = length(trialEarnings)
   tMax= max(tMaxs)
   nTimeStep = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
