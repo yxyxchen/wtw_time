@@ -41,7 +41,7 @@ loadAllData = function() {
   
  
   colnames(hdrData) = "ID"
-  hdrData = as.data.frame(hdrData)
+  hdrData = as.data.frame(hdrData, stringsAsFactors = F)
   outputData = list(hdrData=hdrData, trialData=trialData)
   return(outputData)
   
@@ -81,7 +81,7 @@ loadExpPara = function(paraNames, dirName){
   expPara = data.frame(expPara)
   junk = c(paraNames, "LL_all")
   colnames(expPara) = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"))
-  expPara$id = factor(idList, levels = levels(hdrData$ID)) # ensure the levels are consistent, usually not that problematic though
+  expPara$id = idList # ensure the levels are consistent, usually not that problematic though
   return(expPara)
 }
 
@@ -125,7 +125,7 @@ loadCVPara = function(paraNames, dirName, pattern){
   junk = c(paraNames, "LL_all")
   colnames(expPara) = c(junk, paste0(junk, "SD"), paste0(junk, "Effe"), paste0(junk, "Rhat"),
                         paste0(junk, "2.5"),paste0(junk, "97.5"))
-  expPara$id = factor(idList, levels = idList)
+  expPara$id = idList
   return(expPara)
 }
 

@@ -26,7 +26,7 @@ for(i in 1 : nModel){
   modelName = modelNames[i]
   paraNames = getParaNames(modelName)
   expPara = loadExpPara(paraNames, sprintf("genData/expModelFitting/%sdb", modelName))
-  useID_[[i]] = factor(getUseID(expPara, paraNames), levels = levels(hdrData$ID))
+  useID_[[i]] = getUseID(expPara, paraNames)
 }
 useID = idList[apply(sapply(1 : nModel, function(i )idList %in% useID_[[i]]), MARGIN = 1,
               all)]
@@ -88,7 +88,7 @@ for(mIdx in 1 : nModel){
   thisLogEvidenceTrain = matrix(nrow = nFold, ncol = nSub)
   for(sIdx in 1 : nSub){
     id = ids[sIdx]
-    load(sprintf("genData/expModelFittingCV/split/s%d.RData", id))
+    load(sprintf("genData/expModelFittingCV/split/s%s.RData", id))
     thisTrialData = trialData[[id]]
     # excluded some trials
     excluedTrialsHP = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
@@ -106,7 +106,7 @@ for(mIdx in 1 : nModel){
     scheduledWait = thisTrialData$scheduledWait
     cvPara = loadCVPara(paraNames,
                       sprintf("genData/expModelFittingCV/%sdb",modelName),
-                      pattern = sprintf("s%d_f[0-9]{1,2}_summary.txt", id))
+                      pattern = sprintf("s%s_f[0-9]{1,2}_summary.txt", id))
     # initialize 
     LL_ = vector(length = nFold)
     if(length(getUseID(cvPara, paraNames)) == 10){
