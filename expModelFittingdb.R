@@ -74,10 +74,10 @@ expModelFitting = function(modelName){
       print(text)
       foreach(i = 1 : n) %dopar% {
         thisID = excID[[i]]
-        text = sprintf("refit s%d", thisID)
+        text = sprintf("refit s%s", thisID)
         print(text)
         # update nFits and converge
-        fitFile = sprintf("genData/expModelFitting/%sdb/afit_s%d.RData", modelName, thisID)
+        fitFile = sprintf("genData/expModelFitting/%sdb/afit_s%s.RData", modelName, thisID)
         if(file.exists(fitFile)){
           load(fitFile); nFit = nFit  + 1; save(nFit, file = fitFile)
         }else{
