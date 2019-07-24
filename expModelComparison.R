@@ -79,34 +79,34 @@ ids = hdrData$ID
 nSub = length(ids)
 nFold = 10
 logEvidence = matrix(nrow = length(ids), ncol= nModel) 
-logEvidenceTrain = list(length = nModel)
 for(mIdx in 1 : nModel){
   modelName = modelNames[mIdx]
   paraNames = getParaNames(modelName)
   nPara = length(paraNames)
   likFun = getLikFun(modelName)
-  thisLogEvidenceTrain = matrix(nrow = nFold, ncol = nSub)
   for(sIdx in 1 : nSub){
     id = ids[sIdx]
-    load(sprintf("genData/expModelFittingCV/split/s%d.RData", id))
+    load(sprintf("genData/expModelFittingCV/split/s%s.RData", id))
     thisTrialData = trialData[[id]]
     # excluded some trials
     excluedTrialsHP = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
-                              thisTrialData$condition == "HP")
+                              thisTrialData$condition == conditions[1])
     excluedTrialsLP = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[2]) &
-                              thisTrialData$condition == "LP")
+                              thisTrialData$condition == conditions[2])
     excluedTrials = c(excluedTrialsHP, excluedTrialsLP)
     thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials,]
     # prepare the data
     nTrial = length(thisTrialData$trialEarnings)
     cond = thisTrialData$cond
-    trialEarnings = thisTrialData$trialEarnings
-    timeWaited = pmin(thisTrialData$timeWaited, max(tMaxs))
-    Ts = round(ceiling(timeWaited / stepDuration) + 1)
+    trialEarnings = thisTrialData$trialEarnings   
     scheduledWait = thisTrialData$scheduledWait
+    timeWaited = thisTrialData$timeWaited
+    timeWaited[trialEarnings != 0] = scheduledWait[trialEarnings != 0] 
+    Ts = round(ceiling(timeWaited / stepDuration) + 1)
+
     cvPara = loadCVPara(paraNames,
                       sprintf("genData/expModelFittingCV/%sdb",modelName),
-                      pattern = sprintf("s%d_f[0-9]{1,2}_summary.txt", id))
+                      pattern = sprintf("s%s_f[0-9]+_summary.txt", id))
     # initialize 
     LL_ = vector(length = nFold)
     if(length(getUseID(cvPara, paraNames)) == 10){
@@ -126,27 +126,19 @@ for(mIdx in 1 : nModel){
             junk[is.infinite(junk)] = -10000
             sum(junk)
           }else{
-            junk = c(log(lik_[1:max(Ts[trial] - 2,1), trial]), log(1-lik_[Ts[trial] - 1, trial]))
-            junk[is.infinite(junk)] = -10000
-            sum(junk)
-          }
-        }))
-        thisLogEvidenceTrain[f, sIdx] = sum(sapply(1 : length(trialsTrain), function(i){
-          trial = trialsTrain[i]
-          if(trialEarnings[trial] > 0){
-            junk = log(lik_[1 : max(Ts[trial]-1, 1), trial])
-            junk[is.infinite(junk)] = -10000
-            sum(junk)
-          }else{
-            junk = c(log(lik_[1:max(Ts[trial] - 2,1), trial]), log(1-lik_[Ts[trial] - 1, trial]))
-            junk[is.infinite(junk)] = -10000
-            sum(junk)         
+            if(Ts[trial] > 2){
+              junk = c(log(lik_[1:max(Ts[trial] - 2,1), trial]), log(1-lik_[Ts[trial] - 1, trial]))
+              junk[is.infinite(junk)] = -10000
+              sum(junk)
+            }else{
+              junk = log(1-lik_[Ts[trial] - 1, trial])
+              junk
+            }
           }
         }))
           
       }
       logEvidence[sIdx, mIdx] = sum(LL_)
-      logEvidenceTrain[[mIdx]] = thisLogEvidenceTrain
     }
   }
 }
