@@ -83,7 +83,7 @@ QL2 = function(paras, cond, trialEarnings, timeWaited){
   phi = paras[1]; phiP = paras[2]; tau = paras[3]; gamma = paras[4]; prior = paras[5]
   
   # prepare inputs
-  nTrial = length(scheduledWait)
+  nTrial = length(trialEarnings)
   tMax= max(tMaxs)
   nTimeStep = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
@@ -150,7 +150,7 @@ RL1 = function(paras, cond, trialEarnings, timeWaited){
   phi = paras[1]; tau = paras[2]; prior = paras[3]; beta = paras[4];
   
   # prepare inputs
-  nTrial = length(scheduledWait)
+  nTrial = length(trialEarnings)
   tMax= max(tMaxs)
   nTimeStep = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
@@ -179,7 +179,7 @@ RL1 = function(paras, cond, trialEarnings, timeWaited){
     # calculate likelyhood
     nextReward = trialEarnings[tIdx]
     getReward = ifelse(nextReward == tokenValue, T, F)
-    lik_[,tIdx] =  sapply(1 : nTimeStep, function(i) 1 / sum(1  + exp((Viti - reRate)- Qwait[i])* tau))
+    lik_[,tIdx] =  sapply(1 : nTimeStep, function(i) 1 / sum(1  + exp((Viti - reRate- Qwait[i])* tau)))
     
     # update values 
     T = Ts[tIdx]
@@ -224,7 +224,7 @@ RL2 = function(paras, cond, trialEarnings, timeWaited){
   beta = paras[5]; betaP = paras[6]
   
   # prepare inputs
-  nTrial = length(scheduledWait)
+  nTrial = length(trialEarnings)
   tMax= max(tMaxs)
   nTimeStep = tMax / stepDuration
   Ts = round(ceiling(timeWaited / stepDuration) + 1)
@@ -253,7 +253,7 @@ RL2 = function(paras, cond, trialEarnings, timeWaited){
     # calculate likelyhood
     nextReward = trialEarnings[tIdx]
     getReward = ifelse(nextReward == tokenValue, T, F)
-    lik_[,tIdx] =  sapply(1 : nTimeStep, function(i) 1 / sum(1  + exp((Viti - reRate)- Qwait[i])* tau))
+    lik_[,tIdx] = sapply(1 : nTimeStep, function(i) 1 / sum(1  + exp((Viti - reRate- Qwait[i])* tau)))
     
     # update values 
     T = Ts[tIdx]

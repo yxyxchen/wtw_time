@@ -37,14 +37,10 @@ loadAllData = function() {
     hdrData[i,1] = id
     trialData[[id]] = junk
   }
-  
-  
- 
   colnames(hdrData) = "ID"
   hdrData = as.data.frame(hdrData, stringsAsFactors = F)
   outputData = list(hdrData=hdrData, trialData=trialData)
   return(outputData)
-  
 } 
 
 
