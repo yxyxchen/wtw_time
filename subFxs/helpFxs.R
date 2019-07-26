@@ -6,7 +6,7 @@ getParaNames = function(modelName){
   else if(modelName =="RL2") paraNames = c("phi", "phiP", "tau", "prior", "beta", "betaP")
   else if(modelName == "BL") paraNames = c("pWait")
   else if(grepl("RD[0-9]", modelName)){
-    deleteIdx = as.double(substr(modelName, nchar(modelName), nchar(modelName)))
+    deleteIdx = as.double(substr(modelName, nchar(as.character(modelName)), nchar(as.character(modelName))))
     paraNames = c("phi", "phiP", "tau", "prior", "beta", "betaP")
     paraNames = paraNames[-deleteIdx]
   }
