@@ -11,6 +11,7 @@ getParaNames = function(modelName){
     paraNames = paraNames[-deleteIdx]
   }
   else return("wrong model name")
+  return(paraNames)
 }
 
 getUseID = function(expPara, paraNames){

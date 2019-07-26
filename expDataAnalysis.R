@@ -25,9 +25,9 @@ cat('Analyzing data for',n,'subjects.\n')
 nBlock = 2
 
 # control which individual-level plots to generate
-plotTrialwiseData = F
-plotKMSC = F
-plotWTW = F
+plotTrialwiseData = T
+plotKMSC = T
+plotWTW = T
 
 # parameter for longtermR
 window = 2 * 60
@@ -56,6 +56,7 @@ nTrial = numeric(length =n * nBlock)
 stdWd = numeric(length =n * nBlock) # standard deviation from the survival curve for the whole block
 cvWd =  numeric(length =n * nBlock)
 
+"567" "592" "595" "596" "598" "600" "633"
 # descriptive statistics for individual subjects and blocks
 for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
