@@ -107,3 +107,6 @@ expModelFitting = function(modelName){
     modelFitting(thisTrialData, fileName, paraNames, model, modelName)
   }
 }
+
+
+

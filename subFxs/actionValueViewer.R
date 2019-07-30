@@ -1,7 +1,7 @@
 # unupdated Qwaits were not recorded, so here we manually
 # set them identical with the last updated value
 
-actionValueViewer = function(blockData){
+actionValueViewer = function(thisTrialData){
   Qwaits = blockData$Qwaits
   Qquits = blockData$Qquits
   nTrial =  length(blockData$trialEarnings)

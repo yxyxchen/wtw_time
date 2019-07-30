@@ -48,69 +48,78 @@ medianParas = sapply(1 : nPara, function(i) median(expPara[,i]))
 
 # simulate 
 # determine simFun
-simFun = getSimFun("RL2")
-nSim = 5
-# initialize 
-auc_ = array(NA, dim = c(nSim, nCut, nPara, nCond))
-wtw_ = array(NA, dim = c(length(tGrid), nSim, nCut, nPara, nCond))
-aucSD_ = array(NA, dim = c(nSim, nCut, nPara, nCond))
-wtwSD_ = array(NA, dim = c(length(tGrid), nSim, nCut, nPara, nCond))
-set.seed(123)
-for(cutIdx in 1 : nCut){
-  paras = medianParas
-  paras[pIdx] = paraSamples[cutIdx,pIdx]
-  for(smIdx in 1 : nSim){
-
-  }
-  wtwHP_[[cutIdx]] = wtwMatrixHP
-  wtwLP_[[cutIdx]] = wtwMatrixLP
-}
-
 modelName = "RL2"
-cb = c("HP", "LP")
-simulateUnit = function(paras, nSim, modelName, cb){
-  # get simFun
-  simFun = getSimFun(modelName)
-
-  # initialize outputs
-  aucHP_ = vector(length = nSim)
-  aucLP_ = vector(length = nSim)
-  wtwHP_ = matrix(NA, nrow = length(tGrid), ncol = nSim)
-  wtwLP_ = matrix(NA, nrow = length(tGrid), ncol = nSim)
-  
-  # usually can not use foreach to fill a matrix or a vector
-  for(i in 1 : nSim){
-    set.seed(i)
-    thisTrialData = simFun(paras, cb)
-    # HP
-    kmscResults = kmsc(thisTrialData[thisTrialData$condition == "HP",], min(tMaxs), "", F, kmGrid)
-    aucHP_[i] = kmscResults$auc
-    wtwtsResults = wtwTS(thisTrialData[thisTrialData$condition == "HP",], tGrid, min(tMaxs), "", F )
-    wtwHP_[,i] = wtwtsResults$timeWTW
-    # LP
-    kmscResults = kmsc(thisTrialData[thisTrialData$condition == "LP",], min(tMaxs), "", F, kmGrid)
-    aucLP_[i] = kmscResults$auc
-    wtwtsResults = wtwTS(thisTrialData[thisTrialData$condition == "LP",], tGrid, min(tMaxs), "", F )
-    wtwLP_[,i] = wtwtsResults$timeWTW
+cb = c("LP", "HP")
+nSim = 5
+nCond = length(conditions)
+# initialize 
+auc_ = array(NA, dim = c(nCut, nPara, nCond))
+wtw_ = array(NA, dim = c(length(tGrid), nCut, nPara, nCond))
+aucSD_ = array(NA, dim = c(nCut, nPara, nCond))
+wtwSD_ = array(NA, dim = c(length(tGrid), nCut, nPara, nCond))
+reRate_ = array(NA, dim = c(nCut, nPara))
+for(pIdx in 1 : nPara){
+  for(cutIdx in 1 : nCut){
+    paras = medianParas
+    paras[pIdx] = paraSamples[cutIdx,pIdx]
+    tempt = simulateUnit(paras, nSim, modelName, cb)
+    auc_[cutIdx, pIdx, 1] = tempt$aucHP
+    auc_[cutIdx, pIdx, 2] = tempt$aucLP
+    aucSD_[cutIdx, pIdx, 1] = tempt$aucHPSD
+    aucSD_[cutIdx, pIdx, 2] = tempt$aucLPSD
+    wtw_[ , cutIdx, pIdx, 1] = tempt$wtwHP
+    wtw_[ , cutIdx, pIdx, 2] = tempt$wtwLP
+    wtwSD_[ , cutIdx, pIdx, 1] = tempt$wtwHPSD
+    wtwSD_[ , cutIdx, pIdx, 2] = tempt$wtwLPSD
+    
+    reRate_[cutIdx, pIdx] = tempt$reRate 
   }
-  # summarise 
-  outputs = list(aucHP = mean(aucHP_),
-                 aucLP = mean(aucLP_),
-                 aucHPSD = sd(aucHP_),
-                 aucLPSD = sd(aucLP_),
-                 wtwHP = apply(wtwHP_, MARGIN = 1, mean),
-                 wtwLP = apply(wtwLP_, MARGIN = 1, mean),
-                 wtwHPSD = apply(wtwHP_, MARGIN = 1, sd),
-                 wtwLPSD = apply(wtwHP_, MARGIN = 1, sd))
-  return(outputs)
 }
 
-# HP
+# reorganizd the data 
+junk = data.frame(rbind(auc_[,,1], auc_[,,2])) 
+names(junk) = paraNames
+junk %>% as_tibble() %>% 
+  mutate("condition" = rep(conditions, each = nCut),
+         "percentile" = rep(1:nCut, 2)) %>%
+  gather(key = para, value = auc, -condition, -percentile) %>%
+  mutate(para = factor(para, levels = paraNames)) %>%
+  ggplot(aes(percentile, auc)) + geom_point() + facet_grid(condition~para)
 
-# LP
-kmscResults = kmsc(thisTrialData[thisTrialData$condition == "LP",], min(tMaxs), "", F, kmGrid)
-aucLP_[smIdx, cutIdx] = kmscResults$auc
-wtwtsResults = wtwTS(thisTrialData[thisTrialData$condition == "LP",], tGrid, min(tMaxs), "", F)
-wtwMatrixLP[, smIdx] = wtwtsResults$timeWTW
-# effects of a single parameter 
 
+# reorganizd the data 
+junk = data.frame(rbind(wtw_[,,6,1], wtw_[,,6,2])) 
+names(junk) = 1:nCut
+junk %>% as_tibble() %>%
+  gather(key = cut, value = wtw) %>%
+  mutate(t = rep(1 : (length(tGrid) * 2), nCut)) %>% 
+ggplot(aes(t, wtw)) + geom_point() + facet_grid(~cut)
+
+a[a$cut == 3,] %>% ggplot(aes(t, wtw)) + geom_point() 
+
+junk = data.frame(reRate_) 
+names(junk) = paraNames
+junk %>% as_tibble() %>% 
+  mutate("percentile" = 1:nCut) %>%
+  gather(key = para, value = auc, -percentile) %>%
+  mutate(para = factor(para, levels = paraNames)) %>%
+  ggplot(aes(percentile, auc)) + geom_point() + facet_grid(~para)
+
+
+cb = c("LP", "HP")
+simFun = getSimFun("RL2")
+set.seed(123)
+tempt1 =  simFun(medianParas, cb)
+set.seed(123)
+tempt2 = simFun(medianParas, cb)
+t = 170
+data.frame(Qwait = c(tempt1$Qwaits[,t], tempt2$Qwaits[,t]),
+           Qquit = c(rep(c(tempt1$Qwaits[1,t]) - tempt1$reRates[t]*3, 32),
+                     rep(c(tempt2$Qwaits[1,t]) - tempt2$reRates[t]*3, 32)),
+           t = rep(1:32, 2), betaP = rep(c("L", "H"), each = 32)) %>%
+  gather(key = action, value = value, -t, - betaP) %>%
+  ggplot(aes(t, value, color = action)) + geom_point() +
+  facet_grid(~betaP)
+
+mean(tempt1$reRates[(length(tempt1$reRates)-20) : length(tempt1$reRates)])
+mean(tempt2$reRates[(length(tempt2$reRates)-20) : length(tempt2$reRates)])
