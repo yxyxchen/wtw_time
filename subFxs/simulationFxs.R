@@ -10,6 +10,39 @@ getSimFun = function(modelName){
   return(simFun)
 }
 
+# change the parameter 
+# change the decision rule
+simulateUnitSingle = function(paras, nSim, modelName, cb){
+  # get simFun
+  simFun = getSimFun(modelName)
+  
+  # initialize outputs
+  auc_ = vector(length = nSim)
+  wtw_ = matrix(NA, nrow = length(tGrid), ncol = nSim)
+  reRate_ = vector(length = nSim)
+  # usually can not use foreach to fill a matrix or a vector
+  for(i in 1 : nSim){
+    set.seed(i)
+    thisTrialData = simFun(paras, cb)
+    thisTrialData$Qwaits = NULL
+    thisTrialData = as.data.frame(thisTrialData)
+    # HP
+    kmscResults = kmsc(thisTrialData, min(tMaxs), "", F, kmGrid)
+    auc_[i] = kmscResults$auc
+    wtwtsResults = wtwTS(thisTrialData, tGrid, min(tMaxs), "", F )
+    wtw_[,i] = wtwtsResults$timeWTW
+    junk = nrow(thisTrialData)
+    reRate_[i] = mean(thisTrialData$reRates[(junk - 10) : junk])
+  }
+  # summarise 
+  outputs = list(auc = mean(auc_),
+                 aucSD = sd(auc_),
+                 wtw = apply(wtw_, MARGIN = 1, mean),
+                 wtwSD = apply(wtw_, MARGIN = 1, sd),
+                 reRate = mean(reRate_))
+  return(outputs)
+}
+
 simulateUnit = function(paras, nSim, modelName, cb){
   # get simFun
   simFun = getSimFun(modelName)
@@ -55,8 +88,8 @@ simulateUnit = function(paras, nSim, modelName, cb){
 }
 RL2 = function(paras, cb){
   # parse para
-  phi = paras[1]; phiP = paras[2]; tau = paras[3]; prior = paras[4]
-  beta = paras[5]; betaP = paras[6]
+  phi = paras[1]; nega = paras[2]; tau = paras[3]; prior = paras[4]
+  beta = paras[5]; 
   
   # prepare inputs
   nTrialMax = blockSecs / iti *2
@@ -96,7 +129,7 @@ RL2 = function(paras, cb){
       t = 1
       while(t <= nTimeStep){
         # determine At
-        pWait =  1 / sum(1  + exp((Viti -reRate - Qwait[t])* tau))
+        pWait =  1 / sum(1  + exp((Viti - Qwait[t])* tau))
         action = ifelse(runif(1) < pWait, 'wait', 'quit')
         # observe St+1 and Rt+1
         rewardOccur = thisScheduledWait <= (t * stepDuration) && thisScheduledWait > ((t-1) * stepDuration)
@@ -127,14 +160,14 @@ RL2 = function(paras, cb){
           Qwait[1 : (T-1)] = Qwait[1 : (T-1)] + phi*(returns[1 : (T-1)] - Qwait[1 : (T-1)])
         }else{
           if(T > 2){
-            Qwait[1 : (T-2)] = Qwait[1 : (T-2)] + phiP*(returns[1 : (T-2)] - Qwait[1 : (T-2)])
+            Qwait[1 : (T-2)] = Qwait[1 : (T-2)] + phi * nega * (returns[1 : (T-2)] - Qwait[1 : (T-2)])
           }
         }
         # update Viti
         delta = (returns[1] - reRate * (iti / stepDuration) - Viti)
-        Viti = ifelse(nextReward > 0, Viti + phi * delta, Viti + phiP* delta)
+        Viti = ifelse(nextReward > 0, Viti + phi * delta, Viti + phi * nega * delta)
         # update reRate 
-        reRate = ifelse(nextReward > 0, reRate + beta * delta, reRate + betaP* delta)   
+        reRate = ifelse(nextReward > 0, reRate + beta * delta, reRate + beta * nega * delta)   
         
         # record variables
         reRates[tIdx + 1] = reRate
