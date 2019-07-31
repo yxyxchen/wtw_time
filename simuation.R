@@ -1,5 +1,4 @@
 # this script is used to demonstrate the effect of 
-
 library('ggplot2')
 library('plyr')
 library('dplyr')
@@ -35,25 +34,8 @@ if(length(useID) != nSub){
   cat("The model doesn't converge completely!")
 }
 
-# median paras
-medianParas = sapply(1 : nPara, function(i) median(expPara[,i]))
-meanParas = sapply(1 : nPara, function(i) mean(expPara[,i]))
-                
-meanParas = meanParas[1:5]
-meanParas[2] = meanParas[2] / meanParas[1] 
-
-medianParas = medianParas[1:5]
-medianParas[2] = medianParas[2] / medianParas[1] 
-# simulate for the original paras
-nSim = 10
-modelName = "RL2"
-
-cb = c("HP", "LP")
-tempt = simulateUnit(meanParas, nSim, modelName, cb)
-
-
 # determine paraSamples
-nCut = 5
+nCut = 3
 paraSamples = matrix(NA, nrow = nCut, ncol = (nPara-1))
 for(i in 1 : (nPara - 1)){
   if(i == 2){
@@ -66,13 +48,118 @@ for(i in 1 : (nPara - 1)){
   paraSamples[,i] = seq(qt2, qt8, length.out = nCut)
 }
 
+# median paras
+medianParas = paraSamples[2,]
 
 
-# simulate 
+# simulate for a single condition
 # determine simFun
 modelName = "RL2"
-cb = c("HP", "LP")
-nSim = 5
+blockDuration = 15
+cb = c("HP")
+nSim = 10
+tGrid = seq(0, blockDuration * 60, by = 5)
+# initialize 
+auc_ = array(NA, dim = c(nCut, nPara - 1))
+wtw_ = array(NA, dim = c(length(tGrid) * length(cb), nCut, nPara - 1))
+aucSD_ = array(NA, dim = c(nCut, nPara - 1))
+wtwSD_ = array(NA, dim = c(length(tGrid) * length(cb), nCut, nPara - 1))
+reRate_ = array(NA, dim = c(nCut, nPara - 1))
+auc1_ = array(NA, dim = c(nCut, nPara - 1))
+auc2_ = array(NA, dim = c(nCut, nPara - 1))
+auc3_ = array(NA, dim = c(nCut, nPara - 1))
+aucSD1_ = array(NA, dim = c(nCut, nPara - 1))
+aucSD2_ = array(NA, dim = c(nCut, nPara - 1))
+aucSD3_ = array(NA, dim = c(nCut, nPara - 1))
+for(pIdx in 1 : (nPara-1)){
+  for(cutIdx in 1 : nCut){
+    paras = medianParas
+    paras[pIdx] = paraSamples[cutIdx,pIdx]
+    tempt = simulateUnitSingle(paras, nSim, modelName, cb, blockDuration)
+    auc_[cutIdx, pIdx] = tempt$auc
+    aucSD_[cutIdx, pIdx] = tempt$aucSD
+    wtw_[ , cutIdx, pIdx] = tempt$wtw
+    wtwSD_[ , cutIdx, pIdx] = tempt$wtwSD
+    auc1_[cutIdx, pIdx] = tempt$auc1
+    auc2_[cutIdx, pIdx] = tempt$auc2
+    auc3_[cutIdx, pIdx] = tempt$auc3
+    aucSD1_[cutIdx, pIdx] = tempt$aucSD1
+    aucSD2_[cutIdx, pIdx] = tempt$aucSD2
+    aucSD3_[cutIdx, pIdx] = tempt$aucSD3    
+    reRate_[cutIdx, pIdx] = tempt$reRate 
+  }
+}
+
+# reorganizd the data 
+junk = paraNames[1:5]; junk[2] = "nega"
+colnames(auc_) = junk
+colnames(aucSD_) = junk
+junk1 = auc_ %>% as_tibble() %>% 
+  mutate("percentile" = rep(1:nCut, 1)) %>%
+  gather(key = para, value = auc, -percentile) %>%
+  mutate(para = factor(para, levels = junk))
+junk2 =  aucSD_ %>% as_tibble() %>% 
+  mutate("percentile" = rep(1:nCut, 1)) %>%
+  gather(key = para, value = aucSD, -percentile) %>%
+  mutate(para = factor(para, levels = junk))
+data.frame(junk1, aucSD = junk2$aucSD) %>%
+  mutate(min = auc - aucSD, max = auc + aucSD) %>%
+  ggplot(aes(percentile, auc)) + geom_point() +
+  geom_errorbar(aes(ymin = min, ymax = max)) + facet_grid(~para) +
+  ylab("AUC (s)") + xlab("Value (a.u.)") + ggtitle(cb[1]) + 
+  myTheme
+  
+# I would like to know how much the results change
+dimnames(wtw_) = list(tGrid + 1, 1:nCut, junk)
+library("driver")
+gather_array(wtw_, wtw, "t", "paraValue", "para") %>%
+  mutate(paraValue = as.factor(paraValue),
+         para = factor(para,labels = junk)) %>%
+  ggplot(aes(t, wtw,  color = paraValue)) + geom_line() +
+  facet_wrap(para~.)
+
+# plot the change the wtw1 in the first, mindle and last 20 seconds
+wtw1 = apply(wtw_, MARGIN = c(2,3), FUN = function(x) mean(x[1:60]))
+wtw2 = apply(wtw_, MARGIN = c(2,3), FUN = function(x) mean(x[61:120]))
+wtw3 = apply(wtw_, MARGIN = c(2,3), FUN = function(x) mean(x[121: 181]))
+wtwSD1 = apply(wtwSD_, MARGIN = c(2,3), FUN = function(x) mean(x[1:60]))
+wtwSD2 = apply(wtwSD_, MARGIN = c(2,3), FUN = function(x) mean(x[61:120]))
+wtwSD3 = apply(wtwSD_, MARGIN = c(2,3), FUN = function(x) mean(x[121: 181]))
+data.frame(wtw = c(as.vector(wtw1),as.vector(wtw2),as.vector(wtw3)),
+           wtwSD = c(as.vector(wtwSD1), as.vector(wtwSD2), as.vector(wtwSD3)),
+           paraValue = rep(rep(1 : nCut, nPara -1), 3),
+           para = rep(rep(paraNames[1:5], each = nCut), 3),
+           time = rep(1:3, each = nCut * (nPara - 1))) %>% 
+  mutate(para = factor(para, levels = paraNames[1:5]),
+         paraValue = factor(paraValue),
+         min = wtw - wtwSD, max = wtw + wtwSD) %>%
+  ggplot(aes(time, wtw, color = paraValue)) + geom_line() +
+  geom_point() + 
+  facet_grid(~para) 
+  
+
+data.frame(auc = c(as.vector(auc1_),as.vector(auc2_),as.vector(auc3_)),
+           aucSD = c(as.vector(aucSD1_), as.vector(aucSD2_), as.vector(aucSD3_)),
+           paraValue = rep(rep(1 : nCut, nPara -1), 3),
+           para = rep(rep(paraNames[1:5], each = nCut), 3),
+           time = rep(1:3, each = nCut * (nPara - 1))) %>% 
+  mutate(para = factor(para, levels = paraNames[1:5]),
+         paraValue = factor(paraValue),
+         min = auc - aucSD, max = auc + aucSD) %>%
+  ggplot(aes(time, auc, color = paraValue)) + geom_line() +
+  geom_point() + 
+  facet_grid(~para) 
+
+ # I want to know the results of reRates
+
+
+
+
+# simulate for both conditions
+# determine simFun
+modelName = "RL2"
+cb = c("HP", "HP")
+nSim = 10
 nCond = length(conditions)
 # initialize 
 auc_ = array(NA, dim = c(nCut, nPara - 1, nCond))
@@ -82,16 +169,17 @@ wtwSD_ = array(NA, dim = c(length(tGrid), nCut, nPara - 1, nCond))
 reRate_ = array(NA, dim = c(nCut, nPara - 1))
 for(pIdx in 1 : (nPara-1)){
   for(cutIdx in 1 : nCut){
-    paras = meanParas
+    paras = medianParas
     paras[pIdx] = paraSamples[cutIdx,pIdx]
     tempt = simulateUnit(paras, nSim, modelName, cb)
     auc_[cutIdx, pIdx, 1] = tempt$aucHP
-    auc_[cutIdx, pIdx, 2] = tempt$aucLP
     aucSD_[cutIdx, pIdx, 1] = tempt$aucHPSD
-    aucSD_[cutIdx, pIdx, 2] = tempt$aucLPSD
     wtw_[ , cutIdx, pIdx, 1] = tempt$wtwHP
-    wtw_[ , cutIdx, pIdx, 2] = tempt$wtwLP
     wtwSD_[ , cutIdx, pIdx, 1] = tempt$wtwHPSD
+    
+    auc_[cutIdx, pIdx, 2] = tempt$aucLP
+    aucSD_[cutIdx, pIdx, 2] = tempt$aucLPSD
+    wtw_[ , cutIdx, pIdx, 2] = tempt$wtwLP
     wtwSD_[ , cutIdx, pIdx, 2] = tempt$wtwLPSD
     
     reRate_[cutIdx, pIdx] = tempt$reRate 

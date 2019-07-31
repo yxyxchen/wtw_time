@@ -12,33 +12,50 @@ getSimFun = function(modelName){
 
 # change the parameter 
 # change the decision rule
-simulateUnitSingle = function(paras, nSim, modelName, cb){
+simulateUnitSingle = function(paras, nSim, modelName, cb, blockDuration){
+  tGrid = seq(0, blockDuration * 60, by = 5)
+  
   # get simFun
   simFun = getSimFun(modelName)
   
   # initialize outputs
   auc_ = vector(length = nSim)
-  wtw_ = matrix(NA, nrow = length(tGrid), ncol = nSim)
+  auc1_ = vector(length = nSim)
+  auc2_ = vector(length = nSim)
+  auc3_ = vector(length = nSim)
+  wtw_ = matrix(NA, nrow = length(tGrid) * length(cb), ncol = nSim)
   reRate_ = vector(length = nSim)
   # usually can not use foreach to fill a matrix or a vector
   for(i in 1 : nSim){
     set.seed(i)
-    thisTrialData = simFun(paras, cb)
+    thisTrialData = simFun(paras, cb, blockDuration)
     thisTrialData$Qwaits = NULL
     thisTrialData = as.data.frame(thisTrialData)
-    # HP
     kmscResults = kmsc(thisTrialData, min(tMaxs), "", F, kmGrid)
     auc_[i] = kmscResults$auc
     wtwtsResults = wtwTS(thisTrialData, tGrid, min(tMaxs), "", F )
     wtw_[,i] = wtwtsResults$timeWTW
     junk = nrow(thisTrialData)
     reRate_[i] = mean(thisTrialData$reRates[(junk - 10) : junk])
+    
+    tempt = lapply(1:3, function(i) kmsc(thisTrialData[thisTrialData$sellTime < blockDuration /3 * i * 60
+                                                       &thisTrialData$sellTime >= blockDuration /3 * (i-1)*60,],
+                                         min(tMaxs), "", F, kmGrid))
+    auc1_[i] = tempt[[1]]$auc
+    auc2_[i] = tempt[[2]]$auc
+    auc3_[i] = tempt[[3]]$auc
   }
   # summarise 
   outputs = list(auc = mean(auc_),
                  aucSD = sd(auc_),
                  wtw = apply(wtw_, MARGIN = 1, mean),
                  wtwSD = apply(wtw_, MARGIN = 1, sd),
+                 auc1 = mean(auc1_),
+                 auc2 = mean(auc2_),
+                 auc3 = mean(auc3_),
+                 aucSD1 = sd(auc1_),
+                 aucSD2 = sd(auc2_),
+                 aucSD3 = sd(auc3_),
                  reRate = mean(reRate_))
   return(outputs)
 }
@@ -86,13 +103,13 @@ simulateUnit = function(paras, nSim, modelName, cb){
                  reRate = mean(reRate_))
   return(outputs)
 }
-RL2 = function(paras, cb){
+RL2 = function(paras, cb, blockDuration){
   # parse para
   phi = paras[1]; nega = paras[2]; tau = paras[3]; prior = paras[4]
   beta = paras[5]; 
   
   # prepare inputs
-  nTrialMax = blockSecs / iti *2
+  nTrialMax = blockDuration * 60 / iti *2
   tMax= max(tMaxs)
   nTimeStep = tMax / stepDuration
   
@@ -114,13 +131,13 @@ RL2 = function(paras, cb){
   
   # loop over blocks
   tIdx = 1
-  for(bkIdx in 1 : 2){
+  for(bkIdx in 1 : length(cb)){
     # determine distrib
     seq = c()
     distrib = ifelse(cb[bkIdx] == "HP", "unif16", "exp32")
     elapsedTime = 0
     # loop over trials
-    while(elapsedTime <= blockSecs) {
+    while(elapsedTime <= blockDuration * 60) {
       # determine scheduledWait
       junk = drawSample(distrib, seq)
       thisScheduledWait = junk[['delay']]
@@ -140,7 +157,7 @@ RL2 = function(paras, cb){
         if(nextStateTerminal){
           elapsedTime = elapsedTime + ifelse(getReward, thisScheduledWait, t * stepDuration) + iti
           # only record values before the end of the block
-          if(elapsedTime<= blockSecs){
+          if(elapsedTime<= blockDuration * 60){
             T = t+1
             trialEarnings[tIdx] = ifelse(nextReward == tokenValue, tokenValue, 0);
             timeWaited[tIdx] = ifelse(getReward, thisScheduledWait, t * stepDuration)
@@ -154,7 +171,7 @@ RL2 = function(paras, cb){
         }
       }# end of the loop over timesteps
       # update action values before the end of the block
-      if(elapsedTime <= blockSecs){
+      if(elapsedTime <= blockDuration * 60){
         returns = sapply(1 : (T-1), function(t) nextReward - reRate * (T-t) + Viti)
         if(getReward){
           Qwait[1 : (T-1)] = Qwait[1 : (T-1)] + phi*(returns[1 : (T-1)] - Qwait[1 : (T-1)])
@@ -166,6 +183,7 @@ RL2 = function(paras, cb){
         # update Viti
         delta = (returns[1] - reRate * (iti / stepDuration) - Viti)
         Viti = ifelse(nextReward > 0, Viti + phi * delta, Viti + phi * nega * delta)
+        
         # update reRate 
         reRate = ifelse(nextReward > 0, reRate + beta * delta, reRate + beta * nega * delta)   
         
@@ -180,7 +198,7 @@ RL2 = function(paras, cb){
   }# end of the loop over blocks
   
   # cut off the last trial and return outputs
-  trialNum = c(1 : sum(condition == cb[1]), 1 : sum(condition == cb[2]))
+  trialNum = as.vector(sapply(1 : length(cb), function(i) 1 : sum(condition == cb[i])))
   outputs = list( 
     "trialNum" = trialNum, "trialEarnings" = trialEarnings[1 : (tIdx - 1)],
     "timeWaited" = timeWaited[1 : (tIdx - 1)], "sellTime" = sellTime[1 : (tIdx - 1)],
