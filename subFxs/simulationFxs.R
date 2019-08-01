@@ -24,7 +24,7 @@ simulateUnitSingle = function(paras, nSim, modelName, cb, blockDuration){
   auc2_ = vector(length = nSim)
   auc3_ = vector(length = nSim)
   wtw_ = matrix(NA, nrow = length(tGrid) * length(cb), ncol = nSim)
-  reRate_ = vector(length = nSim)
+  reRate_ = matrix(NA, nrow = blockDuration * 60 / iti, ncol = nSim)
   # usually can not use foreach to fill a matrix or a vector
   for(i in 1 : nSim){
     set.seed(i)
@@ -36,7 +36,7 @@ simulateUnitSingle = function(paras, nSim, modelName, cb, blockDuration){
     wtwtsResults = wtwTS(thisTrialData, tGrid, min(tMaxs), "", F )
     wtw_[,i] = wtwtsResults$timeWTW
     junk = nrow(thisTrialData)
-    reRate_[i] = mean(thisTrialData$reRates[(junk - 10) : junk])
+    reRate_[1 : length(thisTrialData$trialNum),i] = thisTrialData$reRates
     
     tempt = lapply(1:3, function(i) kmsc(thisTrialData[thisTrialData$sellTime < blockDuration /3 * i * 60
                                                        &thisTrialData$sellTime >= blockDuration /3 * (i-1)*60,],
@@ -56,7 +56,7 @@ simulateUnitSingle = function(paras, nSim, modelName, cb, blockDuration){
                  aucSD1 = sd(auc1_),
                  aucSD2 = sd(auc2_),
                  aucSD3 = sd(auc3_),
-                 reRate = mean(reRate_))
+                 reRate = apply(reRate_, MARGIN = 1, FUN = function(x) mean(x, na.rm = T)))
   return(outputs)
 }
 

@@ -51,12 +51,21 @@ for(i in 1 : (nPara - 1)){
 # median paras
 medianParas = paraSamples[2,]
 
+# simualte for oneself
+simFun = getSimFun(modelName)
+set.seed(123)
+tempt = simFun(medianParas, c("LP"), 20)
+
+data.frame(value = c(tempt$Vitis, tempt$reRates), 
+           var = rep(c("Viti", "reRate"), each = length(tempt$trialNum)),
+           trial = rep(tempt$trialNum, 2)) %>%
+  ggplot(aes(trial, value, color = var)) + geom_point()
 
 # simulate for a single condition
 # determine simFun
 modelName = "RL2"
-blockDuration = 15
-cb = c("HP")
+blockDuration = 20
+cb = c("LP")
 nSim = 10
 tGrid = seq(0, blockDuration * 60, by = 5)
 # initialize 
@@ -64,7 +73,7 @@ auc_ = array(NA, dim = c(nCut, nPara - 1))
 wtw_ = array(NA, dim = c(length(tGrid) * length(cb), nCut, nPara - 1))
 aucSD_ = array(NA, dim = c(nCut, nPara - 1))
 wtwSD_ = array(NA, dim = c(length(tGrid) * length(cb), nCut, nPara - 1))
-reRate_ = array(NA, dim = c(nCut, nPara - 1))
+reRate_ = array(NA, dim = c(blockDuration*60 / iti * length(cb), nCut, nPara - 1))
 auc1_ = array(NA, dim = c(nCut, nPara - 1))
 auc2_ = array(NA, dim = c(nCut, nPara - 1))
 auc3_ = array(NA, dim = c(nCut, nPara - 1))
@@ -86,7 +95,7 @@ for(pIdx in 1 : (nPara-1)){
     aucSD1_[cutIdx, pIdx] = tempt$aucSD1
     aucSD2_[cutIdx, pIdx] = tempt$aucSD2
     aucSD3_[cutIdx, pIdx] = tempt$aucSD3    
-    reRate_[cutIdx, pIdx] = tempt$reRate 
+    reRate_[,cutIdx, pIdx] = tempt$reRate 
   }
 }
 
