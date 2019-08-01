@@ -14,7 +14,7 @@ hdrData = allData$hdrData
 trialData = allData$trialData       
 allIDs = hdrData$ID 
 
-modelName = "QL2"
+modelName = "RL2"
 
 # create output directories
 dir.create("figures/expParaAnalysis")
