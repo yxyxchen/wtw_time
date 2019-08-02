@@ -84,7 +84,7 @@ transformed parameters{
     if(RT > 0){
       reRate = reRate +  beta * delta;
     }else{
-      reRate = reRate + betaP * delta;
+      reRate = reRate + beta * nega * delta;
     }
     
     // save action values
