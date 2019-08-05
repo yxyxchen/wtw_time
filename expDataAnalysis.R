@@ -25,9 +25,9 @@ cat('Analyzing data for',n,'subjects.\n')
 nBlock = 2
 
 # control which individual-level plots to generate
-plotTrialwiseData = T
-plotKMSC = T
-plotWTW = T
+plotTrialwiseData = F
+plotKMSC = F
+plotWTW = F
 
 # parameter for longtermR
 window = 2 * 60
@@ -48,15 +48,10 @@ trialEndTime_ = vector(mode = "list", length = n * nBlock)
 trialReRate_ = vector(mode = "list", length = n * nBlock)
 longtermR_ = matrix(NA, nrow = nWindow, ncol = n * nBlock)
 shorttermR_ = matrix(NA, nrow = nWindow, ncol = n * nBlock)
-stdQuitTime = numeric(length =n * nBlock)
-cvQuitTime = numeric(length =n * nBlock)
-muQuitTime = numeric(length =n * nBlock)
 nQuit = numeric(length =n * nBlock)
 nTrial = numeric(length =n * nBlock)
-stdWd = numeric(length =n * nBlock) # standard deviation from the survival curve for the whole block
-cvWd =  numeric(length =n * nBlock)
+stdWd = numeric(length =n * nBlock)
 
-"567" "592" "595" "596" "598" "600" "633"
 # descriptive statistics for individual subjects and blocks
 for (sIdx in 1 : n) {
   thisID = allIDs[sIdx]
@@ -69,16 +64,11 @@ for (sIdx in 1 : n) {
     thisTrialData = thisTrialData[thisBlockIdx,]
     cond = unique(thisTrialData$condition)
     cIdx = ifelse(cond == "HP", 1, 2)
-    # truncate the last min(tMaxs) seconds
+    # truncate the last min(tMaxs) seconds, since here thisTrialData is not a data.frame
     if(isTrun){
       excluedTrials = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[cIdx]))
       nExclude[[noIdx]] = length(excluedTrials)
-      if( nExclude[[noIdx]] > 0){
-        includeEnd = min(excluedTrials) - 1
-      }else{
-        includeEnd = length(thisTrialData$blockNum)
-      }
-      thisTrialData = truncateTrials(thisTrialData, 1, includeEnd)
+      thisTrialData = thisTrialData[! (1 : length(thisTrialData$blockNum)) %in% excluedTrials, ]
     }
     # generate arguments for later analysis 
     label = sprintf('Subject %s, Cond %s, %s',thisID, unique(thisTrialData$condition), hdrData$stress[sIdx])
@@ -92,10 +82,8 @@ for (sIdx in 1 : n) {
     timeWaited[trialEarnings > loseValue] = scheduledWait[trialEarnings > loseValue]
     nAction[noIdx] = sum(round(ifelse(trialEarnings > loseValue, ceiling(timeWaited / stepDuration), floor(timeWaited / stepDuration) + 1)))
     nTrial[noIdx] = length(timeWaited)
-    # calculate varQuitTime
-    stdQuitTime[noIdx] = ifelse(totalEarnings[noIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]))
-    cvQuitTime[noIdx] = ifelse(totalEarnings[noIdx] == 0, NA, sd(timeWaited[trialEarnings == 0]) / mean(timeWaited[trialEarnings == 0]))
-    muQuitTime[noIdx] = mean(timeWaited[trialEarnings == 0])
+   
+     # calculate varQuitTime
     nQuit[noIdx] = sum(trialEarnings == 0)
       
     # plot trial-by-trial data
@@ -110,7 +98,6 @@ for (sIdx in 1 : n) {
     AUC[noIdx] = kmscResults[['auc']]
     kmOnGrid_[[noIdx]] = kmscResults$kmOnGrid
     stdWd[noIdx] = kmscResults$stdWd
-    cvWd[noIdx] = kmscResults$stdWd / kmscResults$auc
     
     if (plotKMSC) {
       readline(prompt = paste('subject',thisID, "block", bkIdx, '(hit ENTER to continue)'))
@@ -129,51 +116,50 @@ for (sIdx in 1 : n) {
       graphics.off()
     }
     
-    # calculate rewardRates
-    trialReRate_[[noIdx]] = trialEarnings / (timeWaited + iti)
-    trialEndTime_[[noIdx]] = thisTrialData$sellTime
-    
-    # calculate longtermR
-    longtermR =     sapply(1 : nWindow, function(i) {
-      startTime = (i-1) * stepLen
-      endTime = (i-1) * stepLen + window
-      junk = which(thisTrialData$trialStartTime >= startTime)
-      if(length(junk) == 0){
-        NA
-      }else{
-        startIdx = min(junk)
-        endIdx = max(which(thisTrialData$sellTime < endTime))
-        realStartTime = thisTrialData$trialStartTime[startIdx]
-        realEndTime = thisTrialData$sellTime[endIdx]
-        sum(thisTrialData$trialEarnings[startIdx : endIdx]) / (realEndTime - realStartTime)        
-      }
-    }) 
-    longtermR_[,noIdx] = longtermR
-    
-    # calculate shorttermR
-    # here timeWaited not includes reaction time
-    # not includes iti
-    shorttermR =   sapply(1 : nWindow, function(i) {
-      startTime = (i-1) * stepLen
-      endTime = (i-1) * stepLen + window
-      junk = which(thisTrialData$trialStartTime >= startTime)
-      if(length(junk) == 0){
-        NA
-      }else{
-        startIdx = min(which(thisTrialData$trialStartTime >= startTime))
-        endIdx = max(which(thisTrialData$sellTime < endTime))
-        longtermR[i] = mean(thisTrialData$trialEarnings[startIdx : endIdx] / timeWaited[startIdx : endIdx])
-      }
-    }) 
-    shorttermR_[,noIdx] = shorttermR
+    # # calculate rewardRates
+    # trialReRate_[[noIdx]] = trialEarnings / (timeWaited + iti)
+    # trialEndTime_[[noIdx]] = thisTrialData$sellTime
+    # 
+    # # calculate longtermR
+    # longtermR =     sapply(1 : nWindow, function(i) {
+    #   startTime = (i-1) * stepLen
+    #   endTime = (i-1) * stepLen + window
+    #   junk = which(thisTrialData$trialStartTime >= startTime)
+    #   if(length(junk) == 0){
+    #     NA
+    #   }else{
+    #     startIdx = min(junk)
+    #     endIdx = max(which(thisTrialData$sellTime < endTime))
+    #     realStartTime = thisTrialData$trialStartTime[startIdx]
+    #     realEndTime = thisTrialData$sellTime[endIdx]
+    #     sum(thisTrialData$trialEarnings[startIdx : endIdx]) / (realEndTime - realStartTime)        
+    #   }
+    # }) 
+    # longtermR_[,noIdx] = longtermR
+    # 
+    # # calculate shorttermR
+    # # here timeWaited not includes reaction time
+    # # not includes iti
+    # shorttermR =   sapply(1 : nWindow, function(i) {
+    #   startTime = (i-1) * stepLen
+    #   endTime = (i-1) * stepLen + window
+    #   junk = which(thisTrialData$trialStartTime >= startTime)
+    #   if(length(junk) == 0){
+    #     NA
+    #   }else{
+    #     startIdx = min(which(thisTrialData$trialStartTime >= startTime))
+    #     endIdx = max(which(thisTrialData$sellTime < endTime))
+    #     longtermR[i] = mean(thisTrialData$trialEarnings[startIdx : endIdx] / timeWaited[startIdx : endIdx])
+    #   }
+    # }) 
+    # shorttermR_[,noIdx] = shorttermR
     
   } # loop over blocks
 }
 blockData = data.frame(id = rep(allIDs, each = nBlock), blockNum = rep( t(1 : nBlock), n),
                        condition = factor(rep(c("LP", "HP"), n), levels = c("HP", "LP")),
                        AUC = AUC, wtwEarly = wtwEarly,totalEarnings = totalEarnings,
-                       nAction = nAction, stdQuitTime = stdQuitTime, cvQuitTime = cvQuitTime,
-                       muQuitTime = muQuitTime, nQuit = nQuit, nTrial = nTrial, stdWd = stdWd, cvWd = cvWd,
+                       nAction = nAction, nQuit = nQuit, nTrial = nTrial, stdWd = stdWd,
                        nExclude = nExclude)
 # lastEndTime = sapply(1 : (nBlock * n), function(i) max(trialEndTime_[[i]]))
 # hist(lastEndTime)

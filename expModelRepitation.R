@@ -24,7 +24,7 @@ expModelRepitation = function(modelName){
   hdrData = allData$hdrData 
   trialData = allData$trialData       
   ids = hdrData$ID 
-  
+  nSub = length(ids)
   
   # re-simulate data
   dir.create("figures/expModelRepitation")
@@ -39,20 +39,31 @@ expModelRepitation = function(modelName){
   
   paraNames = getParaNames(modelName)
   
-  useID = factor(getUseID(expPara, paraNames), levels = levels(hdrData$ID))
+  useID = getUseID(expPara, paraNames)
   repNo = thisRep$repNo
   nSub =(length(useID))
   AUCRep_ = matrix(NA, nrow = nComb , ncol = nSub * nBlock)
   stdWdRep_ = matrix(NA, nrow = nComb, ncol = nSub * nBlock)
   kmOnGridRep_ = vector(mode = "list", length = nSub * nBlock)
+  ks_ = matrix(NA, nrow = nComb , ncol = nSub * nBlock)
+  dist = matrix(NA, nrow = nComb , ncol = nSub * nBlock)
   plotKMSC = F
   
   for(sIdx in 1 : nSub){
     # prepare inputs
     id = useID[[sIdx]]
     nTrial = summaryData$nTrial[summaryData$id == id]
-    label = sprintf("sub%d", id)
+    label = sprintf("sub%s", id)
     kmOnGridMatrix = matrix(NA, nrow = length(kmGrid), ncol = nComb)
+    thisTrialData = trialData[[id]]
+    # excluded some trials
+    excluedTrials1 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[1]) &
+                             thisTrialData$condition == conditions[1])
+    excluedTrials2 = which(thisTrialData$trialStartTime > (blockSecs - tMaxs[2]) &
+                             thisTrialData$condition == conditions[2])
+    excluedTrials = c(excluedTrials1, excluedTrials2)
+    thisTrialData = thisTrialData[!(1 : nrow(thisTrialData)) %in% excluedTrials &
+                                    thisTrialData$blockNum <= 2,]
     for(cIdx in 1 : nComb){
       thisRepTrialData = repTrialData[[repNo[cIdx, which(ids == id)]]]
       for(bkIdx in 1 : 2){
@@ -63,11 +74,20 @@ expModelRepitation = function(modelName){
         AUCRep_[cIdx,noIdx] = kmscResults[['auc']]
         stdWdRep_[cIdx, noIdx] = kmscResults$stdWd
         kmOnGridMatrix[,cIdx] = kmscResults$kmOnGrid
+        junk = ks.test(kmscResults$kmOnGrid,
+                                   kmOnGrid_[[which(ids == id) * 2 - 2 +  bkIdx]])
+        ks_[cIdx, noIdx] = as.numeric(junk$statistic)
+        dist_[cIdx, noIdx] = sum((thisRepTrialData$timeWaited - thisTrialData$timeWaited)^2)
       }
     }
     kmOnGridRep_[[noIdx]] = kmOnGridMatrix
   }
   
+ # save ks_
+  dir.create("genData/expModelRepitation")
+  dir.create(sprintf("genData/expModelRepitation/%s", modelName))
+  save("dist_", "ks_", file = sprintf("genData/expModelRepitation/%s/compare.RData", modelName))
+ 
   # compare emipirical and reproduced AUC
   muAUCRep = apply(AUCRep_, MARGIN = 2, mean);stdAUCRep = apply(AUCRep_, MARGIN = 2, sd)
   minAUCRep = muAUCRep - stdAUCRep;maxAUCRep = muAUCRep + stdAUCRep
