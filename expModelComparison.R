@@ -12,8 +12,8 @@ load("wtwSettings.RData")
 allData = loadAllData()
 hdrData = allData$hdrData           
 trialData = allData$trialData       
-allIDs = hdrData$ID                   # column of subject IDs
-n = length(allIDs) 
+ids = hdrData$ID                   # column of subject IDs
+n = length(ids) 
 load("genData/expDataAnalysis/blockData.RData")
 # select common useID
 idList = hdrData$ID
