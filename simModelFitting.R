@@ -47,7 +47,7 @@ getSimTrialData = function(){
     scheduledWait = thisTrialData$scheduledWait
     simTrialData[[id]] = repFun(paras, cond, scheduledWait)
   }
-  hdrData$ID = factor(hdrData$ID, levels = hdrData$ID)
+  hdrData$ID = hdrData$ID
   save(simTrialData, hdrData, file = "genData/simulation/simTrialData.RData")
 }
 

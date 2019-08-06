@@ -110,7 +110,7 @@ for(mIdx in 1 : nModel){
 
     cvPara = loadCVPara(paraNames,
                       sprintf("genData/expModelFittingCV/%sdb",modelName),
-                      pattern = sprintf("s%s_f[0-9]+_summary.txt", id))
+                      sprintf("s%s_f[0-9]+_summary.txt", id))
     # initialize 
     LL_ = vector(length = nFold)
     if(length(getUseID(cvPara, paraNames)) == 10){
