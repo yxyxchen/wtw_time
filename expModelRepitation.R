@@ -46,7 +46,7 @@ expModelRepitation = function(modelName){
   stdWdRep_ = matrix(NA, nrow = nComb, ncol = nSub * nBlock)
   kmOnGridRep_ = vector(mode = "list", length = nSub * nBlock)
   ks_ = matrix(NA, nrow = nComb , ncol = nSub * nBlock)
-  dist = matrix(NA, nrow = nComb , ncol = nSub * nBlock)
+  dist_ = matrix(NA, nrow = nComb , ncol = nSub * nBlock)
   plotKMSC = F
   
   for(sIdx in 1 : nSub){
@@ -84,9 +84,9 @@ expModelRepitation = function(modelName){
   }
   
  # save ks_
-  dir.create("genData/expModelRepitation")
-  dir.create(sprintf("genData/expModelRepitation/%s", modelName))
-  save("dist_", "ks_", file = sprintf("genData/expModelRepitation/%s/compare.RData", modelName))
+ dir.create("genData/expModelRepitation")
+ dir.create(sprintf("genData/expModelRepitation/%s", modelName))
+ save("dist_", "ks_", file = sprintf("genData/expModelRepitation/%s/compare.RData", modelName))
  
   # compare emipirical and reproduced AUC
   muAUCRep = apply(AUCRep_, MARGIN = 2, mean);stdAUCRep = apply(AUCRep_, MARGIN = 2, sd)
@@ -99,7 +99,7 @@ expModelRepitation = function(modelName){
     ggplot(aes(AUC, muAUCRep)) +  geom_errorbar(aes(ymin = minAUCRep, ymax = maxAUCRep), color = "grey") +
     geom_point(size = 2) + facet_grid(~condition) + 
     geom_abline(slope = 1, intercept = 0) + saveTheme + xlim(c(-2, 22)) + ylim(c(-2, 22)) +
-    ylab("Model-generated (s)") + xlab("Observed (s)") + ggtitle(sprintf("Average WTW, n = %d", length(useID))) +
+    ylab("Model-generated (s)") + xlab("Observed (s)") + ggtitle(sprintf("Average WTW, n = %s", length(useID))) +
     myThemeBig + theme(plot.title = element_text(face = "bold", hjust = 0.5))
   fileName = sprintf("figures/expModelRepitation/%s/AUC_AUCRep.png", modelName)
   ggsave(filename = fileName,  width = 6, height = 4)
@@ -113,45 +113,45 @@ expModelRepitation = function(modelName){
     geom_point(size = 2) + facet_grid(~condition) + 
     geom_abline(slope = 1, intercept = 0) + saveTheme  +
     ylab(expression(bold(paste("Model-generated (s"^2,")")))) +
-    xlab(expression(bold(paste("Observed (s"^2,")")))) +ggtitle(sprintf("Std WTW, n = %d", length(useID)))+
+    xlab(expression(bold(paste("Observed (s"^2,")")))) +ggtitle(sprintf("Std WTW, n = %s", length(useID)))+
     myThemeBig + theme(plot.title = element_text(face = "bold", hjust = 0.5))
   fileName = sprintf("figures/expModelRepitation/%s/std_stdRep.png", modelName)
   ggsave(filename = fileName,  width = 6, height = 4)
   
   
-  # compare emipircal and reproduced trialPlot, for one participant
- 
-  sIdx = 3
-  id = useID[sIdx]
-  cond = unique(summaryData$condition[summaryData$id == id])
-  label = sprintf("Sub %d, %s", id, cond)
-  if(isTrun){
-    junk = trialData[[id]]
-    # excluded some trials
-    excluedTrials1 = which(junk$trialStartTime > (blockSecs - tMaxs[1]) &
-                             junk$condition == conditions[1])
-    excluedTrials2 = which(junk$trialStartTime > (blockSecs - tMaxs[2]) &
-                             junk$condition == conditions[2])
-    excluedTrials = c(excluedTrials1, excluedTrials2)
-    junk = junk[!(1 : nrow(junk)) %in% excluedTrials,]
-  }
-  junk = block2session(junk)
-  trialPlots(junk, "Observed Data")
-  ggsave(sprintf("figures/expModelRepitation/%s/actual_data_%s.png", modelName, id),
-         width = 5, height = 4)
-
-  with(thisRep,{
-    sIdx = 3
-    id = useID[sIdx]
-    tempt = repTrialData[[repNo[1,sIdx]]]
-    tempt$timeWaited =  matrix(unlist(lapply(1:nComb, function(i) repTrialData[[repNo[i,sIdx]]]$timeWaited)), ncol = nComb) %>%
-      apply(MARGIN  = 1, FUN = mean)
-    tempt = within(tempt, sapply(1 : length(timeWaited), function(i) ifelse(timeWaited[i] >= scheduledWait[i], tokenValue, 0)))
-    tempt$blockNum = junk$blockNum
-    trialPlots(tempt,"Model-generated Data")
-    ggsave(sprintf("figures/expModelRepitation/%s/sim_data_%s.png", modelName, id),
-           width = 5, height = 4)
-  })
+  # # compare emipircal and reproduced trialPlot, for one participant
+  # 
+  # sIdx = 3
+  # id = useID[sIdx]
+  # cond = unique(summaryData$condition[summaryData$id == id])
+  # label = sprintf("Sub %s, %s", id, cond)
+  # if(isTrun){
+  #   junk = trialData[[id]]
+  #   # excluded some trials
+  #   excluedTrials1 = which(junk$trialStartTime > (blockSecs - tMaxs[1]) &
+  #                            junk$condition == conditions[1])
+  #   excluedTrials2 = which(junk$trialStartTime > (blockSecs - tMaxs[2]) &
+  #                            junk$condition == conditions[2])
+  #   excluedTrials = c(excluedTrials1, excluedTrials2)
+  #   junk = junk[!(1 : nrow(junk)) %in% excluedTrials,]
+  # }
+  # junk = block2session(junk)
+  # trialPlots(junk, "Observed Data")
+  # ggsave(sprintf("figures/expModelRepitation/%s/actual_data_%s.png", modelName, id),
+  #        width = 5, height = 4)
+  # 
+  # with(thisRep,{
+  #   sIdx = 3
+  #   id = useID[sIdx]
+  #   tempt = repTrialData[[repNo[1,sIdx]]]
+  #   tempt$timeWaited =  matrix(unlist(lapply(1:nComb, function(i) repTrialData[[repNo[i,sIdx]]]$timeWaited)), ncol = nComb) %>%
+  #     apply(MARGIN  = 1, FUN = mean)
+  #   tempt = within(tempt, sapply(1 : length(timeWaited), function(i) ifelse(timeWaited[i] >= scheduledWait[i], tokenValue, 0)))
+  #   tempt$blockNum = junk$blockNum
+  #   trialPlots(tempt,"Model-generated Data")
+  #   ggsave(sprintf("figures/expModelRepitation/%s/sim_data_%s.png", modelName, id),
+  #          width = 5, height = 4)
+  # })
   # 
   # 
   # # survival curve prediction
