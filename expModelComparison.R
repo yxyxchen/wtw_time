@@ -136,6 +136,7 @@ for(mIdx in 1 : nModel){
               sum(junk)
             }else{
               junk = log(1-lik_[Ts[trial] - 1, trial])
+              junk[is.infinite(junk)] = -10000
               junk
             }
           }

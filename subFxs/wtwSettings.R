@@ -38,3 +38,13 @@ save("conditions", "conditionColors", "tMaxs", "blockMins", "blockSecs", "iti", 
      "tokenValue", "stepDuration", "optimRewardRates", 
      "optimWaitTimes", "loseValue", "kmGrid", file = "wtwSettings.RData")
 
+writeMat("wtwSettings.mat",
+         "conditions" = conditions,
+         "tMaxs" = tMaxs,
+         "blockMins" = blockMins,
+         "blockSecs" = blockSecs,
+         "iti" = iti,
+         "tokenValue" = tokenValue, 
+         "stepDuration" = stepDuration,
+         "optimRewardRates" = optimRewardRates,
+         "loseValue" = loseValue)
