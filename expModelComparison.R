@@ -17,8 +17,7 @@ n = length(ids)
 load("genData/expDataAnalysis/blockData.RData")
 # select common useID
 idList = hdrData$ID
-modelNames = factor(c("QL1", "QL2", "RL1", "RL2", "BL"),
-                    levels = c("QL1", "QL2", "RL1", "RL2", "BL"))
+modelNames = c("QL1", "QL2", "RL1", "RL2", "BL")
 nModel = length(modelNames)
 useID_ = vector(mode = "list", length = nModel)
 source("subFxs/loadFxs.R")
