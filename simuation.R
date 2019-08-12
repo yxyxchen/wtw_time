@@ -36,51 +36,39 @@ if(length(useID) != nSub){
 
 # determine paraSamples
 nCut = 3
-paraSamples = matrix(NA, nrow = nCut, ncol = (nPara-1))
-for(i in 1 : (nPara - 1)){
-  if(i == 2){
-    junk = expPara[,2] / expPara[,1]
-  }else{
-    junk = expPara[,i]
-  } 
-  qt2 = quantile(junk, 0.2)
-  qt8 = quantile(junk, 0.8)
+paraSamples = matrix(NA, nrow = nCut, ncol = (nPara))
+for(i in 1 : nPara){
+  qt2 = quantile(expPara[,i], 0.2)
+  qt8 = quantile(expPara[,i], 0.8)
   paraSamples[,i] = seq(qt2, qt8, length.out = nCut)
 }
 
+paraSamples[,4] = paraSamples[,4]  - 22
 # median paras
 medianParas = paraSamples[2,]
 
-# simualte for oneself
-simFun = getSimFun(modelName)
-set.seed(123)
-tempt = simFun(medianParas, c("LP"), 20)
-
-data.frame(value = c(tempt$Vitis, tempt$reRates), 
-           var = rep(c("Viti", "reRate"), each = length(tempt$trialNum)),
-           trial = rep(tempt$trialNum, 2)) %>%
-  ggplot(aes(trial, value, color = var)) + geom_point()
+# 
 
 # simulate for a single condition
 # determine simFun
 modelName = "RL2"
 blockDuration = 20
-cb = c("LP")
+cb = c("HP")
 nSim = 10
 tGrid = seq(0, blockDuration * 60, by = 5)
 # initialize 
-auc_ = array(NA, dim = c(nCut, nPara - 1))
-wtw_ = array(NA, dim = c(length(tGrid) * length(cb), nCut, nPara - 1))
-aucSD_ = array(NA, dim = c(nCut, nPara - 1))
-wtwSD_ = array(NA, dim = c(length(tGrid) * length(cb), nCut, nPara - 1))
-reRate_ = array(NA, dim = c(blockDuration*60 / iti * length(cb), nCut, nPara - 1))
-auc1_ = array(NA, dim = c(nCut, nPara - 1))
-auc2_ = array(NA, dim = c(nCut, nPara - 1))
-auc3_ = array(NA, dim = c(nCut, nPara - 1))
-aucSD1_ = array(NA, dim = c(nCut, nPara - 1))
-aucSD2_ = array(NA, dim = c(nCut, nPara - 1))
-aucSD3_ = array(NA, dim = c(nCut, nPara - 1))
-for(pIdx in 1 : (nPara-1)){
+auc_ = array(NA, dim = c(nCut, nPara))
+wtw_ = array(NA, dim = c(length(tGrid) * length(cb), nCut, nPara))
+aucSD_ = array(NA, dim = c(nCut, nPara))
+wtwSD_ = array(NA, dim = c(length(tGrid) * length(cb), nCut, nPara))
+reRate_ = array(NA, dim = c(blockDuration*60 / iti * length(cb), nCut, nPara))
+auc1_ = array(NA, dim = c(nCut, nPara))
+auc2_ = array(NA, dim = c(nCut, nPara))
+auc3_ = array(NA, dim = c(nCut, nPara))
+aucSD1_ = array(NA, dim = c(nCut, nPara))
+aucSD2_ = array(NA, dim = c(nCut, nPara))
+aucSD3_ = array(NA, dim = c(nCut, nPara))
+for(pIdx in 1 : (nPara)){
   for(cutIdx in 1 : nCut){
     paras = medianParas
     paras[pIdx] = paraSamples[cutIdx,pIdx]
@@ -100,26 +88,27 @@ for(pIdx in 1 : (nPara-1)){
 }
 
 # reorganizd the data 
-junk = paraNames[1:5]; junk[2] = "nega"
-colnames(auc_) = junk
-colnames(aucSD_) = junk
+colnames(auc_) =  paraNames
+colnames(aucSD_) =  paraNames
 junk1 = auc_ %>% as_tibble() %>% 
   mutate("percentile" = rep(1:nCut, 1)) %>%
   gather(key = para, value = auc, -percentile) %>%
-  mutate(para = factor(para, levels = junk))
+  mutate(para = factor(para, levels = paraNames))
 junk2 =  aucSD_ %>% as_tibble() %>% 
   mutate("percentile" = rep(1:nCut, 1)) %>%
   gather(key = para, value = aucSD, -percentile) %>%
-  mutate(para = factor(para, levels = junk))
+  mutate(para = factor(para, levels = paraNames))
 data.frame(junk1, aucSD = junk2$aucSD) %>%
   mutate(min = auc - aucSD, max = auc + aucSD) %>%
   ggplot(aes(percentile, auc)) + geom_point() +
   geom_errorbar(aes(ymin = min, ymax = max)) + facet_grid(~para) +
   ylab("AUC (s)") + xlab("Value (a.u.)") + ggtitle(cb[1]) + 
   myTheme
+dir.create("figures/simualtion")
+ggsave(file = sprintf("figures/simualtion/auc_%s.png", cb[1]), width = 6, height = 4)
   
 # I would like to know how much the results change
-dimnames(wtw_) = list(tGrid + 1, 1:nCut, junk)
+dimnames(wtw_) = list(tGrid + 1, 1:nCut, paraNames)
 library("driver")
 gather_array(wtw_, wtw, "t", "paraValue", "para") %>%
   mutate(paraValue = as.factor(paraValue),
@@ -136,9 +125,9 @@ wtwSD2 = apply(wtwSD_, MARGIN = c(2,3), FUN = function(x) mean(x[61:120]))
 wtwSD3 = apply(wtwSD_, MARGIN = c(2,3), FUN = function(x) mean(x[121: 181]))
 data.frame(wtw = c(as.vector(wtw1),as.vector(wtw2),as.vector(wtw3)),
            wtwSD = c(as.vector(wtwSD1), as.vector(wtwSD2), as.vector(wtwSD3)),
-           paraValue = rep(rep(1 : nCut, nPara -1), 3),
+           paraValue = rep(rep(1 : nCut, nPara), 3),
            para = rep(rep(paraNames[1:5], each = nCut), 3),
-           time = rep(1:3, each = nCut * (nPara - 1))) %>% 
+           time = rep(1:3, each = nCut * (nPara))) %>% 
   mutate(para = factor(para, levels = paraNames[1:5]),
          paraValue = factor(paraValue),
          min = wtw - wtwSD, max = wtw + wtwSD) %>%
@@ -149,9 +138,9 @@ data.frame(wtw = c(as.vector(wtw1),as.vector(wtw2),as.vector(wtw3)),
 
 data.frame(auc = c(as.vector(auc1_),as.vector(auc2_),as.vector(auc3_)),
            aucSD = c(as.vector(aucSD1_), as.vector(aucSD2_), as.vector(aucSD3_)),
-           paraValue = rep(rep(1 : nCut, nPara -1), 3),
+           paraValue = rep(rep(1 : nCut, nPara), 3),
            para = rep(rep(paraNames[1:5], each = nCut), 3),
-           time = rep(1:3, each = nCut * (nPara - 1))) %>% 
+           time = rep(1:3, each = nCut * (nPara))) %>% 
   mutate(para = factor(para, levels = paraNames[1:5]),
          paraValue = factor(paraValue),
          min = auc - aucSD, max = auc + aucSD) %>%
@@ -167,20 +156,20 @@ data.frame(auc = c(as.vector(auc1_),as.vector(auc2_),as.vector(auc3_)),
 # simulate for both conditions
 # determine simFun
 modelName = "RL2"
-cb = c("HP", "HP")
+cb = c("HP")
 nSim = 10
 nCond = length(conditions)
 # initialize 
-auc_ = array(NA, dim = c(nCut, nPara - 1, nCond))
-wtw_ = array(NA, dim = c(length(tGrid), nCut, nPara - 1, nCond))
-aucSD_ = array(NA, dim = c(nCut, nPara - 1, nCond))
-wtwSD_ = array(NA, dim = c(length(tGrid), nCut, nPara - 1, nCond))
-reRate_ = array(NA, dim = c(nCut, nPara - 1))
-for(pIdx in 1 : (nPara-1)){
+auc_ = array(NA, dim = c(nCut, nPara, nCond))
+wtw_ = array(NA, dim = c(length(tGrid), nCut, nPara, nCond))
+aucSD_ = array(NA, dim = c(nCut, nPara, nCond))
+wtwSD_ = array(NA, dim = c(length(tGrid), nCut, nPara, nCond))
+reRate_ = array(NA, dim = c(nCut, nPara))
+for(pIdx in 1 : (nPara)){
   for(cutIdx in 1 : nCut){
     paras = medianParas
     paras[pIdx] = paraSamples[cutIdx,pIdx]
-    tempt = simulateUnit(paras, nSim, modelName, cb)
+    tempt = simulateUnitSingle(paras, nSim, modelName, cb, 20)
     auc_[cutIdx, pIdx, 1] = tempt$aucHP
     aucSD_[cutIdx, pIdx, 1] = tempt$aucHPSD
     wtw_[ , cutIdx, pIdx, 1] = tempt$wtwHP
@@ -207,8 +196,8 @@ junk %>% as_tibble() %>%
 
 # interactions between paras
 cb = c("LP", "HP")
-for(p1 in 1 : (nPara - 1)){
-  for(p2 in (p1 + 2) : (nPara - 1)){
+for(p1 in 1 : (nPara)){
+  for(p2 in (p1 + 2) : (nPara)){
     auc_ = array(NA, dim = c(nCut, nCut, nCond))
     wtw_ = array(NA, dim = c(length(tGrid), nCut, nCut, nCond))
     aucSD_ = array(NA, dim = c(nCut, nCut, nCond))

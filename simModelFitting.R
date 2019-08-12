@@ -104,7 +104,7 @@ expModelFitting = function(encodeModel, decodeModel){
     scheduledWait = thisTrialData$scheduledWait
     # thisTrialData = block2session(thisTrialData) not needed, since we only use timeWaited and trialEarnings
     fileName = sprintf("genData/simModelFitting/%s/%s/s%s", encodeModel, decodeModel, thisID)
-    modelFitting(thisTrialData, fileName, paraNames, decodeModel, decodeModel)
+    modelFitting(thisTrialData, fileName, paraNames, model, decodeModel)
   }
 }
 
