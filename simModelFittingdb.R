@@ -62,7 +62,7 @@ expModelFitting = function(ecodeModel, decodeModel){
     # determine excID
     expPara = loadExpPara(paraNames,
                           sprintf("genData/simModelFitting/%s/%sdb", encodeModel, decodeModel))
-    useID = factor(getUseID(expPara, paraNames), levels = levels(hdrData$ID))
+    useID = getUseID(expPara, paraNames)
     excID = ids[!ids %in% useID]
     
     # loop over excID

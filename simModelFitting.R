@@ -73,8 +73,8 @@ expModelFitting = function(encodeModel, decodeModel){
   rstan_options(auto_write = TRUE) 
   
   # compile the stan model 
-  dir.create(sprintf("genData/simModelFitting/%s", decodeModel))
-  dir.create(sprintf("genData/simModelFitting/%s/%s", decodeModel, encodeModel))
+  dir.create(sprintf("genData/simModelFitting/%s", encodeModel))
+  dir.create(sprintf("genData/simModelFitting/%s/%s",encodeModel,  decodeModel))
   model = stan_model(file = sprintf("stanModels/%s.stan", decodeModel))
 
   # load simData
