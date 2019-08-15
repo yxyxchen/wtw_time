@@ -38,13 +38,26 @@ save("conditions", "conditionColors", "tMaxs", "blockMins", "blockSecs", "iti", 
      "tokenValue", "stepDuration", "optimRewardRates", 
      "optimWaitTimes", "loseValue", "kmGrid", file = "wtwSettings.RData")
 
-writeMat("wtwSettings.mat",
-         "conditions" = conditions,
-         "tMaxs" = tMaxs,
-         "blockMins" = blockMins,
-         "blockSecs" = blockSecs,
-         "iti" = iti,
-         "tokenValue" = tokenValue, 
-         "stepDuration" = stepDuration,
-         "optimRewardRates" = optimRewardRates,
-         "loseValue" = loseValue)
+
+library('ggplot2')
+source('subFxs/plotThemes.R')
+library("tidyr"); library('dplyr')
+dir.create('figures/exp')
+data.frame(CDP = rep(seq(0, 1, by = 1/8), 2),
+           index = c(0, seqHP, 0, seqLP),
+           cond =  rep(c('HP', 'LP'), c(length(seqHP) + 1, length(seqLP) + 1))) %>%
+  ggplot(aes(index, CDP)) + geom_step(size = 2) + facet_grid(~cond) +
+  ylim(c(0,1)) + 
+  myTheme + xlab('Delay duration (s)') + ylab('CDF')
+ggsave('figures/exp/cdp.png', width =6, height = 3)
+
+policy = data.frame(cond = c("HP", "LP"), rewardRate = c(20, 2.2))
+data.frame(rewardRate = c(0, rewardRate[[1]], 0, rewardRate[[2]]),
+           time = c(trialTicks[[1]], trialTicks[[2]]),
+           cond = rep(c("HP", "LP"), time = (tMaxs / stepDuration) + 1)) %>%
+  ggplot(aes(time, rewardRate)) +
+  geom_line(size = 3)  + myTheme + 
+  ylab(expression(bold("Reward rate (cent s"^"-1"*")"))) + xlab("Waiting policy (s)")  +
+  geom_vline(data = policy, aes(xintercept = rewardRate),
+             linetype = "dashed", size = 1.5) + facet_grid(~cond)
+ggsave("figures/exp/reward_rate.png", width = 6, height = 3)
