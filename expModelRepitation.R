@@ -14,7 +14,7 @@ expModelRepitation = function(modelName){
   source("subFxs/analysisFxs.R") # kmsc, trialPlot
   
   # load summaryData
-  nBlock = 2
+  nBlock = 1
   nComb = 10
   load("genData/expDataAnalysis/blockData.RData")
   load("genData/expDataAnalysis/kmOnGridBlock.RData")
