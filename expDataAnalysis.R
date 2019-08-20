@@ -1,6 +1,7 @@
 # in this dataset, only trials within the 7 mins will be kept. Therefore, we don't need to delete any data
 # determine whether use truncated data
-isTrun = T
+datasetColors = c('#c53932', '#529D3E', '#3976AF')
+isTrun = F
 # load libraries
 source('subFxs/loadFxs.R') # for loading data 
 source('subFxs/analysisFxs.R') # for analysis 
@@ -187,10 +188,12 @@ blockData %>% ggplot(aes(condition, AUC)) + geom_boxplot() +
   xlab("") + ylab("Average WTW(s)") + myTheme +
   stat_compare_means(comparisons = list(c("HP", "LP")),
                      aes(label = ..p.signif..), label.x = 1.5, symnum.args= symnum.args,
-                     bracket.size = 1, size = 6) + ylim(c(0, 20))
+                     bracket.size = 1, size = 6, paired = T) + ylim(c(0, 20))
 dir.create("figures")
 dir.create("figures/expDataAnalysis")
 ggsave(sprintf("figures/expDataAnalysis/zTruc_AUC.png"), width = 4, height = 3)
+
+
 
 # plot wtw 
 plotData = data.frame(wtw = unlist(timeWTW_), time = rep(tGrid, n),
@@ -210,6 +213,17 @@ plotData %>% ggplot(aes(time, mean, color = condition,  fill = condition)) +
   myTheme + ylim(c(0, 18))
 ggsave("figures/expDataAnalysis/zTruc_wtw_timecourse.png", width = 6, height = 3)
 
+# untruncated 
+plotData  %>% 
+  ggplot(aes(time, mean)) +
+  geom_ribbon(aes(ymin=min, ymax=max), colour= '#c7e9c0', fill = '#c7e9c0') +
+  geom_line(size = 1, color = datasetColors[2]) + facet_wrap(~condition, scales = "free") +
+  xlab("Cumulative task time (min)") +
+  scale_x_continuous(breaks = seq(0, max(tGrid), by = 3 * 60),
+                     label = seq(0, max(tGrid), by = 3 * 60 ) / 60) + 
+  ylab("WTW (s)") + ylim(c(0, 16)) +
+  sumTheme
+ggsave("figures/expDataAnalysis/wtw_timecourse.eps", width = 6, height = 3)
 # plot survival curve
 data.frame(kmsc = unlist(kmOnGrid_), time = rep(kmGrid, n * nBlock),
                       condition = factor(rep(blockData$condition, each = length(kmGrid))), levels = conditions) %>%
@@ -247,12 +261,15 @@ ggsave("figures/expDataAnalysis/zTruc_shorttermR.png", width = 5, height = 4)
 
   
 # plot LP AUC against HP AUC, to see adapation and correlation
+wTest = wilcox.test( blockData[blockData$condition == "HP", "AUC"],
+             blockData[blockData$condition == "LP", "AUC"], paired = T)
 data.frame(HPAUC = blockData[blockData$condition == "HP", "AUC"],
            LPAUC = blockData[blockData$condition == "LP", "AUC"]) %>% 
-  ggplot(aes(LPAUC, HPAUC)) + geom_point(size = 2) +
+  ggplot(aes(LPAUC, HPAUC)) + geom_point(shape = 21, size = 4, colour = "black", fill = datasetColors[2]) +
   geom_abline(intercept = 0, slope = 1) +
   xlim(c(0, min(tMaxs)))+ ylim(c(0, min(tMaxs))) +
   xlab("LP AUC (s)") + ylab("HP AUC (s)") +
-  myTheme
-ggsave("figures/expDataAnalysis/zTruc_AUC_Cmp.png", width = 3.5, height = 3.5) 
+  annotate("text", x = 12, y = 3, label = sprintf('p = %.3f*', wTest$p.value))+
+  sumTheme
+ggsave("figures/expDataAnalysis/zTruc_AUC_Cmp_sum.eps", width = 4, height = 3) 
                  
