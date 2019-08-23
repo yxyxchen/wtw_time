@@ -223,7 +223,7 @@ plotData  %>%
                      label = seq(0, max(tGrid), by = 3 * 60 ) / 60) + 
   ylab("WTW (s)") + ylim(c(0, 16)) +
   sumTheme
-ggsave("figures/expDataAnalysis/wtw_timecourse.eps", width = 6, height = 3)
+ggsave("figures/expDataAnalysis/wtw_timecourse.eps", width = 6, height = 2)
 # plot survival curve
 data.frame(kmsc = unlist(kmOnGrid_), time = rep(kmGrid, n * nBlock),
                       condition = factor(rep(blockData$condition, each = length(kmGrid))), levels = conditions) %>%
