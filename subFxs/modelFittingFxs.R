@@ -35,8 +35,16 @@ modelFitting = function(thisTrialData, fileName, paraNames, model, modelName){
                     #
                     iti = iti,
                     stepDuration = stepDuration)
-  fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
-                 iter = nIter) 
+  # rm(last.warning)
+  withCallingHandlers({
+    fit = sampling(object = model, data = data_list, cores = 1, chains = nChain,
+                   iter = nIter,control = list(adapt_delta = 0.99, max_treedepth = 11)) 
+  }, warning = function(w){
+    fileNameShort = str_extract(fileName, pattern = "s[0-9]*")
+    warnText = paste(modelName, fileNameShort, w)
+    write(warnText, sprintf("%s_log.txt", modelName), append = T, sep = "n")
+  })
+  
   # extract parameters
   extractedPara = fit %>%
     rstan::extract(permuted = F, pars = c(paraNames, "LL_all"))

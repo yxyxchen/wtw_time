@@ -47,6 +47,8 @@ expModelFitting = function(modelName){
   nCore = parallel::detectCores() -1 # only for the local computer
   registerDoMC(nCore)
   
+  dir.create("outputs")
+  writeLines("", sprintf("outputs/%s_log.txt", modelName))
   foreach(i = 1 : n) %dopar% {
     thisID = idList[[i]]
     thisTrialData = trialData[[thisID]]
