@@ -38,6 +38,7 @@ nWindow = (blockSecs - window) / stepLen + 1
 
 # initialize outputs, organised by block
 AUC = numeric(length =n * nBlock)
+AUC2 = numeric(length =n * nBlock)
 totalEarnings =  numeric(length =n * nBlock)
 nExclude =  numeric(length =n * nBlock)
 nAction = numeric(length =n * nBlock)
@@ -104,7 +105,10 @@ for (sIdx in 1 : n) {
       readline(prompt = paste('subject',thisID, "block", bkIdx, '(hit ENTER to continue)'))
       graphics.off()
     }
-
+     
+    # AUC left
+    kmscResults = kmsc(thisTrialData[thisTrialData$sellTime > blockSecs / 3 * 2,],min(tMaxs),label,plotKMSC, kmGrid)
+    AUC2[noIdx] = kmscResults[['auc']]
     # WTW time series
     wtwCeiling = min(tMaxs)
     wtwtsResults = wtwTS(thisTrialData, tGrid, wtwCeiling, label, plotWTW)
@@ -161,15 +165,16 @@ blockData = data.frame(id = rep(allIDs, each = nBlock), blockNum = rep( t(1 : nB
                        condition = factor(rep(c("LP", "HP"), n), levels = c("HP", "LP")),
                        AUC = AUC, wtwEarly = wtwEarly,totalEarnings = totalEarnings,
                        nAction = nAction, nQuit = nQuit, nTrial = nTrial, stdWd = stdWd,
-                       nExclude = nExclude)
+                       nExclude = nExclude, AUC2 = AUC2)
 # lastEndTime = sapply(1 : (nBlock * n), function(i) max(trialEndTime_[[i]]))
 # hist(lastEndTime)
 # range(lastEndTime)
-
+sumData = blockData
 # save data
 save(kmOnGrid_, file = 'genData/expDataAnalysis/kmOnGridBlock.RData')
 save(blockData, file = 'genData/expDataAnalysis/blockData.RData')
-
+save(sumData, file = 'genData/expDataAnalysis/sumData.RData')
+save(timeWTW_, file = 'genData/expDataAnalysis/timeWTW.RData')
 # descriptive statistics for individual subjects and blocks
 # for (sIdx in 1 : n) {
 #   thisID = allIDs[sIdx]
@@ -193,7 +198,17 @@ dir.create("figures")
 dir.create("figures/expDataAnalysis")
 ggsave(sprintf("figures/expDataAnalysis/zTruc_AUC.png"), width = 4, height = 3)
 
+<<<<<<< HEAD
+blockData %>% ggplot(aes(condition, AUC2)) + geom_boxplot() +
+  geom_dotplot(binaxis='y', stackdir='center', aes(fill = condition)) +
+  scale_fill_manual(values = conditionColors) + 
+  xlab("") + ylab("Average WTW(s)") + myTheme +
+  stat_compare_means(comparisons = list(c("HP", "LP")),
+                     aes(label = ..p.signif..), label.x = 1.5, symnum.args= symnum.args,
+                     bracket.size = 1, size = 6) + ylim(c(0, 20))
+=======
 
+>>>>>>> 35c19b88ec6d2b37fb6825e78f5eefb89e71677b
 
 # plot wtw 
 plotData = data.frame(wtw = unlist(timeWTW_), time = rep(tGrid, n),

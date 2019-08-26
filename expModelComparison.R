@@ -70,8 +70,16 @@ data.frame(pwaic = as.vector(pWaic_), model = rep(modelNames, each = nUse)) %>%
   summarise(muData = mean(pwaic), seData = sd(pwaic) / sqrt(length(pwaic)),
               minData = muData - seData, maxData = muData + seData) 
 
-# analyze the relationship between behaviors and the best model
-bestQL2 = ids[apply(logEvidence_, MARGIN = 1, function(x) which.max(x) == which(modelNames == "QL2"))]
+# ratio
+ratioQL2 = sum(logEvidence_[,modelNames == 'QL2'] >= logEvidence_[,modelNames == 'QL1']) / n
+ratioRL2 = sum(logEvidence_[,modelNames == 'RL2'] >= logEvidence_[,modelNames == 'RL1']) / n
+ratioRL2QL2= sum(logEvidence_[,modelNames == 'RL2'] > logEvidence_[, modelNames == 'QL2']) / n
+data.frame(ratio = c(ratioQL2, ratioRL2, ratioRL2QL2),
+           model = factor(c('QL', 'RL', 'QLRL'), levels = c('QL', 'RL', 'QLRL')))%>%
+  ggplot(aes(model, ratio)) + geom_bar(stat = 'identity') + xlab(' ') + ylab('Ratio') + 
+  scale_x_discrete(labels = c('LL_QL2 > LL_QL1', 'LL_RL2 > LL_RL1', 'LL_RL2 > LL_QL2')) + myTheme 
+ggsave('figures/expModelComparison/loo_ratio.png', width = 8, height = 3)
+
 
 
 # extract logEvidence, cross validation
@@ -158,3 +166,14 @@ data.frame(model = modelNames, bestNums = bestNums) %>%  ggplot(aes(x="", y=best
   myTheme
 dir.create("figures/expModelComparison")
 ggsave("figures/expModelComparison/CV_nBest.png", width = 5, height =3.5)
+
+# ratio
+ratioQL2 = sum(logEvidence[,modelNames == 'QL2'] >= logEvidence[,modelNames == 'QL1']) / n
+ratioRL2 = sum(logEvidence[,modelNames == 'RL2'] >= logEvidence[,modelNames == 'RL1']) / n
+ratioRL2QL2= sum(logEvidence[,modelNames == 'RL2'] >= logEvidence[, modelNames == 'QL2']) / n
+data.frame(ratio = c(ratioQL2, ratioRL2, ratioRL2QL2),
+           model = factor(c('QL', 'RL', 'QLRL'), levels = c('QL', 'RL', 'QLRL')))%>%
+  ggplot(aes(model, ratio)) + geom_bar(stat = 'identity') + xlab(' ') + ylab('Ratio') + 
+  scale_x_discrete(labels = c('LL_QL2 > LL_QL1', 'LL_RL2 > LL_RL1', 'LL_RL2 > LL_QL2')) + myTheme 
+ggsave('figures/expModelComparison/CV_ratio.png', width = 8, height = 3)
+

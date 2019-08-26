@@ -14,7 +14,7 @@ hdrData = allData$hdrData
 trialData = allData$trialData       
 allIDs = hdrData$ID 
 
-modelName = "BL"
+modelName = "QL2"
 
 # create output directories
 dir.create("figures/expParaAnalysis")
@@ -45,6 +45,15 @@ expPara %>% filter(id %in% useID) %>% select(c(paraNames)) %>%
   mutate(para = factor(para, levels = paraNames, labels = paraNames ))%>% 
   group_by(para) %>% summarise(mu = mean(value), median = median(value))
 
+# optimism bias
+load('genData/expDataAnalysis/blockData.RData')
+expPara$nQuit = blockData$nQuit[1 : 84 %% 2 == 0] + blockData$nQuit[1 : 84 %% 2 == 1]
+wilcox.test(expPara$nega[expPara$nQuit >= 10] - 1)
+median(expPara$nega[expPara$nQuit >= 10])
+expPara %>% filter(nQuit >= 10) %>%ggplot(aes(nega)) + geom_histogram(bins = 10) +
+  geom_vline(xintercept = 1) + myTheme 
+ggsave(sprintf('figures/expParaAnalysis/optimism_%s.png', modelName),
+       width = 4, height = 4)
 
 # explore relationships between para and blockData
 load("genData/expDataAnalysis/blockData.RData")
