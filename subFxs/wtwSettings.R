@@ -38,20 +38,61 @@ save("conditions", "conditionColors", "tMaxs", "blockMins", "blockSecs", "iti", 
      "tokenValue", "stepDuration", "optimRewardRates", 
      "optimWaitTimes", "loseValue", "kmGrid", file = "wtwSettings.RData")
 
-
+# plot cdf
 library('ggplot2')
 source('subFxs/plotThemes.R')
 library("tidyr"); library('dplyr')
 dir.create('figures/exp')
-data.frame(CDP = rep(seq(0, 1, by = 1/8), 2),
-           index = c(0, seqHP, 0, seqLP),
-           cond =  rep(c('HP', 'LP'), c(length(seqHP) + 1, length(seqLP) + 1))) %>%
+data.frame(CDP = c(seq(0, 1, by = 1/8), 1, seq(0, 1, by = 1/8) ,1),
+           index = c(0, seqHP, tMaxs[1], 0, seqLP, tMaxs[2]),
+           cond =  rep(c('HP', 'LP'), c(length(seqHP) + 2, length(seqLP) + 2))) %>%
   ggplot(aes(index, CDP)) + geom_step(size = 2) + facet_grid(~cond) +
   ylim(c(0,1)) + 
   myTheme + xlab('Delay duration (s)') + ylab('CDF')
 ggsave('figures/exp/cdp.png', width =6, height = 3)
 
-policy = data.frame(cond = c("HP", "LP"), rewardRate = c(20, 2.2))
+# given seqHP we need smaller stepDuration
+stepDuration = 0.1
+seqHP = round(seqHP, 2)
+seqLP = round(seqLP, 2)
+# plot reward rates approximately
+trialTicks = list(
+  'HP' = round(seq(0, tMaxs[1], by = stepDuration), 1),
+  'LP' = round(seq(0, tMaxs[2], by = stepDuration), 1)
+)
+
+trialGapValues = list(
+  "HP" = round(seq(stepDuration, tMaxs[1], by = stepDuration), 2),
+  "LP" = round(seq(stepDuration, tMaxs[2], by = stepDuration), 2)
+)
+
+trialGapIdxs = list(
+  "HP" = 1 : length(trialGapValues$HP),
+  "LP" = 1 : length(trialGapValues$LP)
+)
+
+HP = rep(0, length(trialGapIdxs$HP))
+HP[sapply(1 :8, function(i) which.min(abs(trialGapValues$HP - seqHP[i])))] = 1 / 8
+LP = rep(0, length(trialGapIdxs$LP))
+LP[sapply(1 :8, function(i) which.min(abs(trialGapValues$LP - seqLP[i])))] = 1 / 8
+rewardDelayPDF=list('HP'= HP, 'LP' = LP)
+rewardDelayCDF = list('HP' = cumsum(rewardDelayPDF$HP),
+                      'LP' = cumsum(rewardDelayPDF$LP))
+
+# assume the rewards happen at the end of the gap
+# E(t_reward | t_reward <= T) 
+HP = cumsum((trialGapValues$HP - 0.5 * stepDuration) * rewardDelayPDF$HP) / cumsum(rewardDelayPDF$HP)
+LP = cumsum((trialGapValues$LP - 0.5 * stepDuration) * rewardDelayPDF$LP) / cumsum(rewardDelayPDF$LP)
+# no reward arrives before the first reward timing, so points before that turn to NAN
+meanRewardDelay = list('HP' = HP, 'LP' = LP)
+
+HP = tokenValue * rewardDelayCDF$HP /
+  ((meanRewardDelay$HP * rewardDelayCDF$HP + trialGapValues$HP * (1 - rewardDelayCDF$HP)) + iti)
+LP = tokenValue * rewardDelayCDF$LP /
+  ((meanRewardDelay$LP * rewardDelayCDF$LP + trialGapValues$LP * (1 - rewardDelayCDF$LP)) + iti)
+rewardRate = list('HP' = HP, 'LP' = LP)
+
+policy = data.frame(cond = c("HP", "LP"), rewardRate = as.double(optimWaitTimes))
 data.frame(rewardRate = c(0, rewardRate[[1]], 0, rewardRate[[2]]),
            time = c(trialTicks[[1]], trialTicks[[2]]),
            cond = rep(c("HP", "LP"), time = (tMaxs / stepDuration) + 1)) %>%
