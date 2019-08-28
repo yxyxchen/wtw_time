@@ -1,46 +1,56 @@
-
-# loadData.R
-# varying-magnitude WTW
-
-# each subject has:
-#  header file (*hdr.txt)
-#  main data file (ending both in .mat and .txt)
-#  empty *keytimes.txt file, a vestige of the effort key-pressing version. 
-
-
 loadAllData = function() {
-  library("gtools")
-  # define column names 
-  colNames = c('blockNum', 'trialNum', 'trialStartTime', 'nKeyPresses', 'scheduledWait',
-    'rewardTime', 'timeWaited', 'sellTime', 'trialEarnings','totalEarnings')
+  # loads hdrData and trialData
   
-  # get fileNames
-  dataDir = "data"
-  fileNames = list.files(path= dataDir, pattern=('wtw-timing-fixed_[0-9]{3}_[0-9].txt'))
+  # outputs:
+  # hdrData: exp info for each participant
+  # trialData: a length = nSub list, each element containing trial-wise data for each partcipant. 
+  
+  # each elemant of trialData is formatted similarly to this example:
+  # blockNum : [130x1 int]
+  # trialNum : [130x1 int]
+  # trialStartTime : [130x1 num] # when participant start a trial
+  # sellTime : [130x1 num] # when participants sell a token
+  # nKeyPresses : [130x1 int]
+  # scheduledWait : [130x1 num] # delay durations for rewards
+  # rewardTime : [130x1 num] # actual delay durations (constrainted by the screen update freq), NA for non-rewarded trials
+  # timeWaited : [130x1 num] # persistence durations, namely sellTime - trialStartTime
+  # trialEarnings : [130x1 int] trial-wise payments, either 10 or 0
+  # totalEarnings : [130x1 int] cumulative payments
+  
+  library("gtools")
+
+  # get the filename for each participant 
+  fileNames = list.files(path= "data", pattern=('wtw-timing-fixed_[0-9]{3}_[0-9].txt'))
   fileNames = mixedsort(sort(fileNames))
-  nFile = length(fileNames)
+  nSub = length(fileNames)
   if(any(duplicated(fileNames))){
     print("duplicated files!")
     break
   }else{
-    sprintf("load %d files", nFile) 
+    sprintf("load data for %d participants", nSub) 
   }
   
-  # load data
-  hdrData = matrix(ncol = 1, nrow = nFile)
+  # initialize output variables
+  hdrData = matrix(ncol = 1, nrow = nFile) # hdrData only contains ids 
+  colnames(hdrData) = "id"
   trialData = list()
-  for(i in 1 : nFile){
+  trialDataNames = c('blockNum', 'trialNum', 'trialStartTime', 'nKeyPresses', 'scheduledWait',
+               'rewardTime', 'timeWaited', 'sellTime', 'trialEarnings','totalEarnings')
+  
+  # loop over participants
+  for(i in 1 : nSub){
     fileName = fileNames[i]
     id = substr(fileName, 18,20)
-    junk = read.csv(sprintf("%s/%s", dataDir, fileName), col.names = colNames, header = F)
-    junk$condition = ifelse(junk$blockNum == 1, "LP", "HP")
     hdrData[i,1] = id
-    trialData[[id]] = junk
+    thisTrialData = read.csv(sprintf("%s/%s", dataDir, fileName), col.names = trialDataNames, header = F)
+    trialData[[id]] = thisTrialData
   }
-  colnames(hdrData) = "ID"
+  # return outputs
   hdrData = as.data.frame(hdrData, stringsAsFactors = F)
-  outputData = list(hdrData=hdrData, trialData=trialData)
-  return(outputData)
+  outputs= list(
+    hdrData=hdrData,
+    trialData=trialData)
+  return(outputs)
 } 
 
 
