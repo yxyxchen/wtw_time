@@ -86,6 +86,7 @@ LP = cumsum((trialGapValues$LP - 0.5 * stepDuration) * rewardDelayPDF$LP) / cums
 # no reward arrives before the first reward timing, so points before that turn to NAN
 meanRewardDelay = list('HP' = HP, 'LP' = LP)
 
+
 HP = tokenValue * rewardDelayCDF$HP /
   ((meanRewardDelay$HP * rewardDelayCDF$HP + trialGapValues$HP * (1 - rewardDelayCDF$HP)) + iti)
 LP = tokenValue * rewardDelayCDF$LP /

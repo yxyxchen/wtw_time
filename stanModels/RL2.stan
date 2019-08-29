@@ -1,11 +1,11 @@
 data {
   // experiment parameters
   real stepSec;// duration of one step
-  int nStepMax; // max num of steps (actions) in one trial
+  int nStepMax; // max num of steps in one trial
   real iti;// iti duration, unit = second
   
   // initialization parameters
-  real VitiIni; 
+  real reRateIni; 
   
   // experiment data
   int N; // number of trials
@@ -19,44 +19,43 @@ transformed data {
 }
 parameters {
   // parameters:
-  // phi_pos : learning rate for postive outcomes
-  // phi_neg: learning rate for negative outcomes or reward omssions 
-  // tau : action consistency, namely soft-max temperature paraeter
-  // gamma: discount factor
-  // prior: prior belief parameter
+  // phi_pos : action values learning rate for postive outcomes
+  // phi_neg : action values leanring rate for negative outcomes
+  // beta : reward rate learning rate
+  // tau : action consistency, namely soft-max temperature 
+  // prior : prior belief parameter
   
-  // for computational efficiency,we sample raw parameters from unif(-0.5, 0.5)
-  // which are later transformed into actual parameters
   // Additionally, since phi_pos and phi_neg are correlated
   // we reparameterize phi_neg as its ratio relative to phi_pos
-  real<lower = -0.5, upper = 0.5> raw_phi_pos;
+  // since phi_pos, phi_neg, and beta are correlated
+  // we reparameterize phi_nega and beta as ratios relative to phi_pos
+  real<lower = -0.5, upper = 0.5> raw_phi_pos; 
   real<lower = -0.5, upper = 0.5> raw_phi_neg_ratio; 
+  real<lower = -0.5, upper = 0.5> raw_beta_ratio; 
   real<lower = -0.5, upper = 0.5> raw_tau;
-  real<lower = -0.5, upper = 0.5> raw_gamma;
   real<lower = -0.5, upper = 0.5> raw_prior;
 }
 transformed parameters{
   // scale raw parameters 
   real phi_pos = (raw_phi_pos + 0.5) * 0.3; // phi_pos ~ unif(0, 0.3)
-  real phi_neg_ratio = (raw_phi_neg_ratio + 0.5) * 5; // phi_neg_ratio ~ unif(0, 5)
-  real phi_neg = min([phi_pos * phi_neg_ratio, 1]'); // convert phi_neg_ratio to phi_neg
+  real phi_neg_ratio = (raw_phi_neg_ratio + 0.5) * 5; // np_ratio ~ unif(0, 5)
+  real beta_ratio =  (raw_beta_ratio + 0.5) * 1; // bp_ratio ~ unif(0, 1)
+  real phi_neg = min([phi_pos * phi_neg_ratio, 1]');// convert phi_neg_ratio to phi_neg
+  real beta = phi_pos * beta_ratio; // convert beta_ratio to beta
   real tau = (raw_tau + 0.5) * 21.9 + 0.1; // tau ~ unif(0.1, 22)
-  real gamma = (raw_gamma + 0.5) * 0.3 + 0.4; // gamma ~ unif(0.7, 1)
   real prior = (raw_prior + 0.5) * 65; // prior ~ unif(0, 65)
   
-  // declare action values 
-  // // state value of the ITI state
-  real Viti; 
-  // // action value of waiting in each step after ITI
-  vector[nStepMax] Qwaits; 
-  
-  // declare variables to record action values 
-  matrix[nStepMax, N] Qwaits_ = rep_matrix(0, nStepMax, N);
-  vector[N] Viti_ = rep_vector(0, N);
-  
-  // initialize action values 
-  //// the initial value of the ITI state 
-  Viti = VitiIni; 
+  // declare variables
+  real Viti; // value of the ITI state
+  real reRate; // reward rate
+  vector[nStepMax] Qwaits; // action value of waiting in each step after the ITI state
+  vector[N] Viti_ = rep_vector(0, N); // recording Viti
+  vector[N] reRate_ = rep_vector(0, N);// recording reRate
+  matrix[nStepMax, N] Qwaits_ = rep_matrix(0, nStepMax, N); // recording Qwaits
+  real delta; // prediction error to update Viti and reRate
+  // initialize variables
+  Viti = 0;
+  reRate = reRateIni;
   // the initial waiting value delines with elapsed time 
   // and the prior parameter determines at which step it falls below Viti
   for(i in 1 : nStepMax){
@@ -64,20 +63,20 @@ transformed parameters{
   }
   
   // record initial action values
-  Qwaits_[,1] = Qwaits;
   Viti_[1] = Viti;
- 
+  reRate_[1] = reRate;
+  Qwaits_[,1] = Qwaits;
+  
   //loop over trials
-  for(tIdx in 1 : (N - 1)){
+  for(tIdx in 1 : (N -1)){
     int T = Ts[tIdx]; // current terminal state
     int R = Rs[tIdx]; // current reward
     
-    // update action values 
+    // update action values for rewarded trials
     if(R > 0){
       for(t in 1 : (T - 1)){
         // calculate the expected return G 
-        real G = R * gamma^(T - t -1) + Viti * gamma^(T - t);
-        // update Qwait towards G
+        real G = R - reRate * (T - t) + Viti;
         Qwaits[t] = Qwaits[t] + phi_pos * (G - Qwaits[t]);
       }
     }else{
@@ -85,23 +84,26 @@ transformed parameters{
       // since the agent proceed to the next ITI on that step
       if(T > 2){
         for(t in 1 : (T-2)){
-          real G =  R  * gamma^(T - t -1) + Viti * gamma^(T - t);
+          real G =  R  - reRate * (T - t) + Viti;
           Qwaits[t] = Qwaits[t] + phi_neg * (G - Qwaits[t]);    
         }
       }
     }
-    
-    // update Viti
+
+    // update Viti and reRate
+    delta =  (R - reRate * (T - 1 + iti / stepSec) + Viti - Viti);
     if(R > 0){
-      Viti = Viti + phi_pos * ((R  * gamma^(T - 2 + iti / stepSec) + Viti * gamma^(T - 1 + iti / stepSec)) - Viti);
+      Viti = Viti + phi_pos * delta;
     }else{
-      Viti = Viti + phi_neg * ((R  * gamma^(T - 2 + iti / stepSec) + Viti * gamma^(T - 1 + iti / stepSec)) - Viti);
+      Viti = Viti + phi_neg * delta;
     }
-    
+    reRate = reRate + beta * delta;
+
     
     // save action values
     Qwaits_[,tIdx+1] = Qwaits;
     Viti_[tIdx+1] = Viti;
+    reRate_[tIdx + 1] = reRate;
   }
 }
 model {
@@ -112,8 +114,8 @@ model {
   // distributions for raw parameters
   raw_phi_pos ~ uniform(-0.5, 0.5);
   raw_phi_neg_ratio ~ uniform(-0.5, 0.5);
+  raw_beta_ratio ~ uniform(-0.5, 0.5);
   raw_tau ~ uniform(-0.5, 0.5);
-  raw_gamma ~ uniform(-0.5, 0.5);
   raw_prior ~ uniform(-0.5, 0.5);
   
   // loop over trials

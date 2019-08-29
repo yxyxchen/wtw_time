@@ -31,7 +31,7 @@ loadAllData = function() {
   }
   
   # initialize output variables
-  hdrData = matrix(ncol = 1, nrow = nFile) # hdrData only contains ids 
+  hdrData = matrix(ncol = 1, nrow = nSub) # hdrData only contains ids 
   colnames(hdrData) = "id"
   trialData = list()
   trialDataNames = c('blockNum', 'trialNum', 'trialStartTime', 'nKeyPresses', 'scheduledWait',
@@ -42,7 +42,7 @@ loadAllData = function() {
     fileName = fileNames[i]
     id = substr(fileName, 18,20)
     hdrData[i,1] = id
-    thisTrialData = read.csv(sprintf("%s/%s", dataDir, fileName), col.names = trialDataNames, header = F)
+    thisTrialData = read.csv(sprintf("%s/%s", "data", fileName), col.names = trialDataNames, header = F)
     trialData[[id]] = thisTrialData
   }
   # return outputs
