@@ -43,8 +43,10 @@ loadAllData = function() {
     id = substr(fileName, 18,20)
     hdrData[i,1] = id
     thisTrialData = read.csv(sprintf("%s/%s", "data", fileName), col.names = trialDataNames, header = F)
+    thisTrialData = within(thisTrialData, {condition = ifelse(blockNum == 1, "LP", "HP")})
     trialData[[id]] = thisTrialData
   }
+ 
   # return outputs
   hdrData = as.data.frame(hdrData, stringsAsFactors = F)
   outputs= list(

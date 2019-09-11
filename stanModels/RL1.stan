@@ -62,7 +62,6 @@ transformed parameters{
   vector[N] Viti_ = rep_vector(0, N); // recording Viti
   vector[N] reRate_ = rep_vector(0, N);// recording reRate
   matrix[nStepMax, N] Qwaits_ = rep_matrix(0, nStepMax, N); // recording Qwaits
-  real delta; // prediction error to update Viti and reRate
   real rwdSignal;  // // the reward signal for updating action values at the end of each trial 
   real itiDelta; // prediction error for the iti state
   
@@ -86,7 +85,8 @@ transformed parameters{
     int R = Rs[tIdx]; // current reward
     
     //calculate the reward signal for updating action value 
-    // which equals Rt+1 + V(St+1). Noticably, St+1 is the iti state
+    // which equals R plus the discounted value of the successor state. Noticably, 
+    // the successor state at the end of trial is always the iti state before the next trial
     rwdSignal = R + Viti;
     
     // update Qwaits, Viti and reRate towards the net reward signals,

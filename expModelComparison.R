@@ -1,23 +1,37 @@
-# libraries and scripts
-library("stringr")
+# libraries and sub-functions
 library("ggplot2")
 library("dplyr")
 library("tidyr")
 source("subFxs/helpFxs.R")
 source("subFxs/loadFxs.R")
-source("subFxs/modelComparisonFxs.R")
 source("subFxs/plotThemes.R")
-load("wtwSettings.RData")
-# load model names
+load("expParas.RData")
+
+# load trialData since we need scheduledWait 
 allData = loadAllData()
-hdrData = allData$hdrData           
+hdrData = allData$hdrData 
 trialData = allData$trialData       
-ids = hdrData$ID                   # column of subject IDs
-n = length(ids) 
-load("genData/expDataAnalysis/blockData.RData")
+ids = hdrData$id[hdrData$stress == "no_stress"]
+nSub = length(ids)
+
+for(i in 1 : nSub){
+  id = ids[i]
+  fileName = sprintf("genData/expModelFit/RL2/s%s_summary.txt", id)
+  fitSummary = read.csv(fileName,
+                        header = F)
+  if(id %in% c("32")){
+    fitSummary$nDt = rep(1, nrow(fitSummary))
+  }else{
+    fitSummary$nDt = rep(0, nrow(fitSummary))
+  }
+  # write outputs  
+  write.table(fitSummary, file = fileName, 
+              sep = ",", col.names = F, row.names=FALSE)
+}
+
 # select common useID
-idList = hdrData$ID
-modelNames = c("QL1", "QL2", "RL1", "RL2", "BL")
+# modelNames = c("QL1", "QL2", "RL1", "RL2", "BL")
+modelNames = c("QL1", "QL2")
 nModel = length(modelNames)
 useID_ = vector(mode = "list", length = nModel)
 source("subFxs/loadFxs.R")
