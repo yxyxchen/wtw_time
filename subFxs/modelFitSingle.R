@@ -24,7 +24,7 @@ modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config
     # prepare inputs for fitting the model
     condition = unique(thisTrialData$condition)
     ## maximal number of steps in a trial
-    nStepMax =  max(tMaxs) / stepSec
+    nStepMax = max(tMaxs) / stepSec
     ## ensure timeWaited = scheduledWait on rewarded trials
     thisTrialData = within(thisTrialData, {timeWaited[trialEarnings!= 0] = scheduledWait[trialEarnings!= 0]})
     ## terminal state in each trial
@@ -36,7 +36,7 @@ modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config
       iti = iti,
       stepSec = stepSec,
       nStepMax = nStepMax,
-      N = length(thisTrialData$blockNum), # number of trials
+      N = length(thisTrialData$trialEarnings), # number of trials
       Rs = thisTrialData$trialEarnings, # rewards on each trial
       Ts = Ts)
     if(modelName %in% c("QL1", "QL2")){
@@ -52,14 +52,20 @@ modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config
       inputs$reRateIni = reRateIni     
     }
    
+   # strip the path in outputFile
+   outputFile_clean = sub(pattern = sprintf("genData/(exp|sim)*ModelFit(CV)*/[A-Z0-9]*/*%s/", modelName),
+                      replacement = "", outputFile)
+    
+   grep(pattern = sprintf("genData/simModelFit/QL2/%s/", modelName),
+        outputFile)
    # fit the model
     withCallingHandlers({
       fit = sampling(object = model, data = inputs, cores = 1, chains = nChain,
                      iter = nIter, control = controlList) 
-      print(sprintf("Finish %s !",id))
-      write(sprintf("Finish %s !", id), warningFile, append = T, sep = "\n")
+      print(sprintf("Finish %s !", outputFile_clean))
+      write(sprintf("Finish %s !", outputFile_clean), warningFile, append = T, sep = "\n")
     }, warning = function(w){
-      warnText = paste(modelName, id, w)
+      warnText = paste(modelName, outputFile_clean, w)
       write(warnText, warningFile, append = T, sep = "\n")
     })
   

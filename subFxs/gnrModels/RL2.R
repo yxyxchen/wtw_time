@@ -20,9 +20,9 @@
 # Qwaits_ : [nStepMax x nTrial num] action value of waiting for each time step at each trial
 # Viti_ : [nTrialx1 num] state value of the iti stage at each trial 
 
-QL2 = function(paras, condition_, scheduledWait_){
+RL2 = function(paras, condition_, scheduledWait_){
   # extract parameter values
-  phi_pos = paras[1]; phi_neg = paras[2]; tau = paras[3]; gamma = paras[4]; prior = paras[5]
+  phi_pos = paras[1]; phi_neg = paras[2]; tau = paras[3]; prior = paras[4]; beta = paras[5]
   
   # num of trials
   nTrial = length(scheduledWait_) # num of trials 
@@ -32,7 +32,8 @@ QL2 = function(paras, condition_, scheduledWait_){
   nStepMax =  max(tMaxs) / stepSec # maximal number of steps in a trial
   
   # initialize action values 
-  Viti = 0.9 * mean(unlist(optimRewardRates) * stepSec / (1 - 0.85))
+  Viti = 0
+  reRate =  0.9 * mean(unlist(optimRewardRates) * stepSec) 
   Qwaits = (prior  - 1 : nStepMax) * 0.1 + Viti
   
   # initialize output variables
@@ -84,13 +85,13 @@ QL2 = function(paras, condition_, scheduledWait_){
     # update action values at the end of each trial
     if(tIdx < nTrial){
       # calculate the reward signal for updating action value which equals 
-      # trialEarnings + discounted value of the successor state gamma. Noticably,
+      # trialEarnings + value of the successor state gamma. Noticably,
       # the successor state at the end of trial is always the iti state before the next trial
-      rwdSignal = trialEarnings + Viti * gamma
-      # discounted reward signals for step 1 - (T-1)
-      stepRwdSignals = sapply(1 : (T-1), function(t) gamma^(T-t-1) * rwdSignal)
-      # discounted reward signals for the iti state
-      itiRwdSignal = rwdSignal * gamma^(T-2 + iti / itiSec)
+      rwdSignal = trialEarnings + Viti 
+      # differential reward signals for step 1 - (T-1) 
+      stepRwdSignals = sapply(1 : (T-1), function(t) rwdSignal - reRate * (T-t))
+      # differential reward signals for the iti state 
+      itiRwdSignal = rwdSignal - reRate * (T-1 + iti / stepSec)
       
       # update Qwaits 
       if(getReward){
@@ -106,6 +107,9 @@ QL2 = function(paras, condition_, scheduledWait_){
       # update Viti
       itiDelta = itiRwdSignal - Viti
       Viti = ifelse(trialEarnings > 0, Viti + phi_pos * itiDelta, Viti + phi_neg * itiDelta)
+      
+      # update reRate 
+      reRate = reRate + beta * itiDelta
       
       # record updated values
       Qwaits_[,tIdx + 1] = Qwaits
