@@ -88,7 +88,7 @@ MFAnalysis = function(isTrct){
   }
   # return outputs
   sumStats = data.frame(
-    id = ids,
+    id = rep(ids, each = 2),
     condition = rep(c('LP', 'HP'), nSub),
     nExcl = nExcls,
     totalEarnings = totalEarnings_s,
