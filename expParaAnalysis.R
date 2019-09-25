@@ -1,71 +1,58 @@
-library("ggplot2")
-library("dplyr")
-library("tidyr")
-library("Hmisc")
-library("coin")
+load("expParas.RData")
+library("ggplot2"); library("Hmisc"); library("coin")
+library("dplyr"); library("tidyr")
 source("subFxs/plotThemes.R")
 source("subFxs/loadFxs.R") # load blockData and expPara
-source("subFxs/helpFxs.R") # getParaNames
+source("subFxs/helpFxs.R") # getparaNames
 source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
-load("wtwSettings.RData")
-# load trialData since we need scheduledWait 
-allData = loadAllData()
-hdrData = allData$hdrData 
-trialData = allData$trialData       
-allIDs = hdrData$ID 
+source('MFAnalysis.R')
 
+# model Name
 modelName = "QL2"
+paraNames = getParaNames(modelName)
+nPara = length(paraNames)
 
-# create output directories
+# output directories
 dir.create("figures/expParaAnalysis")
 saveDir = sprintf("figures/expParaAnalysis/%s", modelName)
 dir.create(saveDir)
 
+# 
+MFResults = MFAnalysis(isTrct = T)
+sumStats = MFResults[['sumStats']]
 # load expPara
 paraNames = getParaNames(modelName)
 nPara = length(paraNames)
-parentDir = "genData/expModelFitting"
-dirName = sprintf("%s/%sdb",parentDir, modelName)
-expPara= loadExpPara(paraNames, dirName)
-useID = getUseID(expPara, paraNames)
+parentDir = "genData/expModelFit"
+dirName = sprintf("%s/%s",parentDir, modelName)
+expPara = loadExpPara(paraNames, dirName)
+passCheck = checkFit(paraNames, expPara)
 
-
-# plot hist
-expPara %>% filter(id %in% useID) %>% select(c(paraNames)) %>%
-  gather(key = "para", value = "value") %>%
+# plot hist 
+# paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
+# paraNames = c("LR", "LP", expression(tau), "P")
+paraNames = paraNames
+expPara$condition = sumStats$condition[1 : nrow(expPara)]
+expPara %>% filter(passCheck ) %>% select(c(paraNames, "condition")) %>%
+  gather(-c("condition"), key = "para", value = "value") %>%
   mutate(para = factor(para, levels = paraNames, labels = paraNames ))%>%
   ggplot(aes(value)) + geom_histogram(bins = 8) +
-  facet_grid(~ para, scales = "free", labeller = label_parsed) + 
+  facet_grid(condition ~ para, scales = "free", labeller = label_parsed) + 
   myTheme + xlab(" ") + ylab(" ")
 fileName = sprintf("%s/%s/hist.pdf", "figures/expParaAnalysis", modelName)
-ggsave(fileName, width = 8, height = 3)
+ggsave(fileName, width = 8, height = 4)
 
-expPara %>% filter(id %in% useID) %>% select(c(paraNames)) %>%
+# summary stats for expPara
+expPara %>% filter(passCheck) %>% select(c(paraNames)) %>%
   gather(key = "para", value = "value") %>%
   mutate(para = factor(para, levels = paraNames, labels = paraNames ))%>% 
   group_by(para) %>% summarise(mu = mean(value), median = median(value))
 
-# optimism bias
-load('genData/expDataAnalysis/blockData.RData')
-expPara$nQuit = blockData$nQuit[1 : 84 %% 2 == 0] + blockData$nQuit[1 : 84 %% 2 == 1]
-wilcox.test(expPara$nega[expPara$nQuit >= 10] - 1)
-median(expPara$nega[expPara$nQuit >= 10])
-expPara %>% filter(nQuit >= 10) %>%ggplot(aes(nega)) + geom_histogram(bins = 10) +
-  geom_vline(xintercept = 1) + myTheme 
-ggsave(sprintf('figures/expParaAnalysis/optimism_%s.png', modelName),
-       width = 4, height = 4)
 
-# explore relationships between para and blockData
-load("genData/expDataAnalysis/blockData.RData")
-expParaRL2 = loadExpPara(getParaNames("RL2"), "genData/expModelFitting/RL2db")
-expParaQL2 = loadExpPara(getParaNames('QL2'), 'genData/expModelFitting/QL2db')
-expParaPlus = data.frame(AUCHP = blockData$AUC[blockData$condition == "HP"],
-                   AUCLP = blockData$AUC[blockData$condition == "LP"],
-                   id = blockData$id[blockData$condition == "LP"],
-                   gamma = expParaQL2$gamma)
-expParaPlus$LL_all_RQ = expParaRL2$LL_all - expParaQL2$LL_all
-expParaPlus$CV_RQ =logEvidence[,4] - logEvidence[,2] 
-expParaPlus %>% filter(CV_RQ > - 1000) %>%
-  ggplot(aes(gamma, CV_RQ)) + geom_point()
+
+
+
+
+
 
 
