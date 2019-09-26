@@ -1,6 +1,9 @@
 # this script is used to demonstrate the effect of 
 library('ggplot2')
+<<<<<<< HEAD
 source("subFxs/plotThemes.R")
+=======
+>>>>>>> 5f3dde0be2d90d7bcd8410c43aac042b82441dca
 library('plyr')
 library('dplyr')
 library('tidyr')
@@ -8,7 +11,11 @@ load("expParas.RData")
 source("subFxs/helpFxs.R") # getParas
 source("subFxs/loadFxs.R") # load scheduledWait from empirical data
 source("subFxs/analysisFxs.R") 
+<<<<<<< HEAD
 
+=======
+source("subFxs/plotThemes.R")
+>>>>>>> 5f3dde0be2d90d7bcd8410c43aac042b82441dca
 
 # loop over participants 
 library("doMC")
@@ -23,6 +30,7 @@ trialData = allData$trialData
 ids = hdrData$ids        
 nSub = length(ids)   
 
+<<<<<<< HEAD
 # load expPara
 modelName = "QL2"
 paraNames = getParaNames(modelName)
@@ -63,6 +71,121 @@ auc3_ = array(NA, dim = c(nCut, nPara))
 aucSD1_ = array(NA, dim = c(nCut, nPara))
 aucSD2_ = array(NA, dim = c(nCut, nPara))
 aucSD3_ = array(NA, dim = c(nCut, nPara))
+=======
+# determine modelName and paraNames
+modelName = "QL2"
+paraNames = getParaNames(modelName)
+nPara = length(paraNames)
+source(sprintf("subFxs/simModels/%s.R", modelName))
+
+# determine paraSamples
+nCut = 5
+paraSamples = cbind(
+  seq(0.05, 0.03, length.out = nCut),
+  seq(0.001, 0.016, length.out = nCut),
+  seq(0.1, 5.1, length.out = nCut),
+  seq(0.7, 0.99, length.out = nCut),
+  c(2, 7, 12, 17, 22)
+)
+colnames(paraSamples) = paraNames
+  
+# median paras
+medianParas = paraSamples[3, ]
+
+# constants for simulation
+blockDuration = 10 * 60
+tGrid = seq(0, blockDuration, by = 5)
+nSim = 10
+
+# initialize outputs
+simFun = get(modelName)
+set.seed(123)
+aucHP_ = array(NA, dim = c(nCut, nPara))
+wtwHP_ = array(NA, dim = c(length(tGrid), nCut, nPara))
+aucSDHP_ = array(NA, dim = c(nCut, nPara))
+wtwSDHP_ = array(NA, dim = c(length(tGrid), nCut, nPara))
+aucLP_ = array(NA, dim = c(nCut, nPara))
+wtwLP_ = array(NA, dim = c(length(tGrid), nCut, nPara))
+aucSDLP_ = array(NA, dim = c(nCut, nPara))
+wtwSDLP_ = array(NA, dim = c(length(tGrid), nCut, nPara))
+
+# 
+condition = "HP"
+for(pIdx in 1 : nPara){
+  for(cIdx in 1 : nCut){
+    paras = medianParas
+    paras[pIdx] = paraSamples[cIdx, pIdx]
+    # initialize outputs 
+    aucs = vector(length = nSim)
+    wtws = matrix(NA, nrow = length(tGrid), ncol = nSim)
+    for(sIdx in  1 : nSim) {
+      tempt = simFun(paras, condition, blockDuration)
+      kmscResults = kmsc(tempt, min(tMaxs), tGrid)
+      aucs[sIdx] = kmscResults$auc
+      wtwReults = wtwTS(tempt, tGrid, min(tMaxs), F)
+      wtws[,sIdx] = wtwReults$timeWTW
+    }
+    aucHP_[cIdx, pIdx] = mean(aucs)
+    aucSDHP_[cIdx, pIdx] = sd(aucs)
+    wtwHP_[,cIdx, pIdx] = apply(wtws, MARGIN = 1, mean)
+    wtwSDHP_[,cIdx, pIdx] = apply(wtws, MARGIN = 1, sd)
+  }
+}
+
+#
+condition = "LP"
+for(pIdx in 1 : nPara){
+  for(cIdx in 1 : nCut){
+    paras = medianParas
+    paras[pIdx] = paraSamples[cIdx, pIdx]
+    # initialize outputs 
+    aucs = vector(length = nSim)
+    wtws = matrix(NA, nrow = length(tGrid), ncol = nSim)
+    for(sIdx in  1 : nSim) {
+      tempt = simFun(paras, condition, blockDuration)
+      kmscResults = kmsc(tempt, min(tMaxs), tGrid)
+      aucs[sIdx] = kmscResults$auc
+      wtwReults = wtwTS(tempt, tGrid, min(tMaxs), F)
+      wtws[,sIdx] = wtwReults$timeWTW
+    }
+    aucLP_[cIdx, pIdx] = mean(aucs)
+    aucSDLP_[cIdx, pIdx] = sd(aucs)
+    wtwLP_[,cIdx, pIdx] = apply(wtws, MARGIN = 1, mean)
+    wtwSDLP_[,cIdx, pIdx] = apply(wtws, MARGIN = 1, sd)
+  }
+}
+
+
+plotData = 
+  data.frame(auc = c(as.vector(aucHP_), as.vector(aucLP_)),
+             aucSD = c(as.vector(aucSDHP_), as.vector(aucSDLP_)),
+             paraValue = rep(as.vector(paraSamples), 2),
+             paraName = rep(rep(paraNames, each = nCut),2),
+             condition = rep(conditions, each= nPara * nCut)) %>%
+  mutate(min = auc - aucSD, max = auc + aucSD)
+
+
+# plot
+dir.create("figures/paraEffect")
+for(c in 1 : 2){
+  condition = conditions[c]
+  for(i in 1 : nPara){
+    paraName = paraNames[i]
+    plotData[plotData$paraName == paraName & plotData$condition == condition,]%>%
+      ggplot(aes(paraValue, auc))  +
+      geom_line(size = 3) +
+      geom_errorbar(aes(ymin = min, ymax = max)) + 
+      ylim(c(0, 16)) + myTheme +
+      xlab(paraName)
+    ggsave(sprintf("figures/paraEffect/%s_%s.eps", condition, paraName,
+                   width = 4, height = 3.5))
+  }
+}
+
+
+
+
+>>>>>>> 5f3dde0be2d90d7bcd8410c43aac042b82441dca
 for(pIdx in 1 : (nPara)){
   for(cutIdx in 1 : nCut){
     paras = medianParas
