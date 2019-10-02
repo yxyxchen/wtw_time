@@ -16,7 +16,7 @@ expModelCmp = function(){
   nSub = length(ids) 
   
   # check fit
-  modelNames = c("QL1", "QL2", "RL1", "RL2_v2")
+  modelNames = c("QL1", "QL2", "RL1", "RL2", "BL")
   nModel = length(modelNames)
   passCheck_ = matrix(NA, nrow = nSub, ncol = nModel)
   for(i in 1 : nModel){
@@ -39,6 +39,10 @@ expModelCmp = function(){
       pWaic_[sIdx, m] = LOO$p_loo
     }
   }
+  
+  # 
+  outputTable = cbind(logEvidence_, as.double(passCheck_))
+  write.table(outputTable, "genData/logEvidence.csv", col.names = F, sep = ",")
   
   # compare model with one learning rates and two seprate learning rates
   library("ggpubr")
