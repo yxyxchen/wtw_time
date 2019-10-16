@@ -28,6 +28,7 @@ dirName = sprintf("%s/%s",parentDir, modelName)
 expPara = loadExpPara(paraNames, dirName)
 passCheck = checkFit(paraNames, expPara)
 
+
 # plot hist 
 # paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
 # paraNames = c("LR", "LP", expression(tau), "P")
