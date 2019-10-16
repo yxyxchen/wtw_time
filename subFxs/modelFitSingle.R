@@ -39,7 +39,7 @@ modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config
       N = length(thisTrialData$trialEarnings), # number of trials
       Rs = thisTrialData$trialEarnings, # rewards on each trial
       Ts = Ts)
-    if(modelName %in% c("QL1", "QL2")){
+    if(modelName %in% c("QL1", "QL2", "QL1_prime", "QL2_prime")){
       ## in Q-learning, the initial value of the iti state is proportional to 
       ## the discounted total rewards averaged across two conditions
       ## discount factor for one step is 0.85
@@ -55,9 +55,7 @@ modelFitSingle = function(id, thisTrialData, modelName, paraNames, model, config
    # strip the path in outputFile
    outputFile_clean = sub(pattern = sprintf("genData/(exp|sim)*ModelFit(CV)*/[A-Z0-9]*/*%s/", modelName),
                       replacement = "", outputFile)
-    
-   grep(pattern = sprintf("genData/simModelFit/QL2/%s/", modelName),
-        outputFile)
+  
    # fit the model
     withCallingHandlers({
       fit = sampling(object = model, data = inputs, cores = 1, chains = nChain,
