@@ -8,7 +8,7 @@ source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 source('MFAnalysis.R')
 
 # model Name
-modelName = "QL2"
+modelName = "QL1"
 paraNames = getParaNames(modelName)
 nPara = length(paraNames)
 
@@ -27,6 +27,8 @@ parentDir = "genData/expModelFit"
 dirName = sprintf("%s/%s",parentDir, modelName)
 expPara = loadExpPara(paraNames, dirName)
 passCheck = checkFit(paraNames, expPara)
+
+write.csv(expPara, file = "para.csv")
 
 # plot hist 
 # paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
