@@ -28,7 +28,10 @@ dirName = sprintf("%s/%s",parentDir, modelName)
 expPara = loadExpPara(paraNames, dirName)
 passCheck = checkFit(paraNames, expPara)
 
+<<<<<<< HEAD
 write.csv(expPara, file = "para.csv")
+=======
+>>>>>>> f2e6316a339f7756cbf49def3c9a1cb4591d61a1
 
 # plot hist 
 # paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
