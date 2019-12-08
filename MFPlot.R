@@ -42,6 +42,18 @@ data.frame(muWTWHP = sumStats$muWTW[sumStats$condition == 'HP'],
   annotate("text", x = 15, y = 3, label = sprintf('p < 0.001***', wTest$p.value)) +
   xlab("LP muAUC / (s)") + ylab("HP muAUC / (s)") + 
   myTheme + xlim(c(-1,17)) + ylim(c(-1,17)) 
-ggsave("figures/MFPlot/muWTW_comparison.eps", width = 3, height = 4)
+ggsave("figures/MFPlot/muWTW_comparison.eps", width = 4, height = 3)
 
+# plot an example participant 
+AUC = sumStats$muWTW[1]
+survCurve = MFResults$survCurve_[[1]]
+data.frame(time = seq(0, tMaxs[1], by = 0.1), surveCurve = survCurve) %>% ggplot(aes(time, surveCurve)) +
+  geom_step(size = 2) + myTheme + xlab("Elapsed time (s)") + ylab("Survival rate") +
+  scale_x_continuous(limits = c(0, tMaxs[1]), breaks = c(0, tMaxs[1])) +
+  annotate("text", x = 4, y = 0.6, label = sprintf("AUC = %.2f s", AUC), size = 5)
+ggsave("figures/example_AUC.png", width = 4, height = 3)
 
+data.frame(wtw = MFResults$timeWTW_[[1]], time = tGrid) %>% 
+  ggplot(aes(time, wtw)) + geom_step(size = 1) + 
+  xlab("Time (s)") + ylab("WTW (s)") + myTheme 
+ggsave("figures/example_WTW.png", width = 4, height = 3)

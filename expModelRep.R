@@ -96,6 +96,9 @@ expModelRep = function(modelName){
                         empMu = muWTWEmp, empStd = stdWTWEmp,
                         passCheck = rep(passCheck, each = 2), 
                         condition = sumStats$condition) %>% filter(passCheck == T)
+  
+  cor.test(plotData$mu, plotData$empMu, method = "spearman")
+  
   save(plotData, file = "genData/timeRep.RData")
   ## plot to compare average willingess to wait
     plotData %>%
