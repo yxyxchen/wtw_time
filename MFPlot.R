@@ -32,7 +32,7 @@ ggsave("figures/MFPlot/wtw_timecourse.eps", width = 5, height = 4)
 # plot average WTWs in two environments
 MFResults = MFAnalysis(isTrct = T)
 sumStats = MFResults[['sumStats']]
-wTest = wilcox.test( sumStats[sumStats$condition == "HP", "muWTW"],
+wTest = wilcox.testc( sumStats[sumStats$condition == "HP", "muWTW"],
                      sumStats[sumStats$condition == "LP", "muWTW"],paired = T)
 data.frame(muWTWHP = sumStats$muWTW[sumStats$condition == 'HP'],
            muWTWLP = sumStats$muWTW[sumStats$condition == 'LP']) %>%
