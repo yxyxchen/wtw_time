@@ -8,7 +8,7 @@ source("subFxs/analysisFxs.R") # plotCorrelation and getCorrelation
 source('MFAnalysis.R')
 
 # model Name
-modelName = "QL1"
+modelName = "QL2"
 paraNames = getParaNames(modelName)
 nPara = length(paraNames)
 
@@ -28,10 +28,6 @@ dirName = sprintf("%s/%s",parentDir, modelName)
 expPara = loadExpPara(paraNames, dirName)
 passCheck = checkFit(paraNames, expPara)
 
-<<<<<<< HEAD
-write.csv(expPara, file = "para.csv")
-=======
->>>>>>> f2e6316a339f7756cbf49def3c9a1cb4591d61a1
 
 # plot hist 
 # paraNames = c("LR", "LP", expression(tau), expression(gamma), "P")
@@ -54,8 +50,17 @@ expPara %>% filter(passCheck) %>% select(c(paraNames)) %>%
   group_by(para) %>% summarise(mu = mean(value), median = median(value))
 
 
+# plot the correlation between adaptation and parameters 
+adapation = sumStats$muWTW[seq(2, 84, by = 2)] -  sumStats$muWTW[seq(1, 84, by = 2)]
+data.frame(adapation, LR = expPara$phi_pos, passCheck) %>%
+  filter(passCheck)  %>%
+  ggplot(aes(LR, adapation)) + geom_point() +
+  xlab("Reward sensitivity") + ylab("Flexibility") + myTheme 
 
-
+data.frame(adapation, LP = expPara$phi_neg, passCheck) %>%
+  filter(passCheck)  %>%
+  ggplot(aes(LP, adapation)) + geom_point() +
+  xlab("Reward sensitivity") + ylab("Flexibility") + myTheme 
 
 
 
