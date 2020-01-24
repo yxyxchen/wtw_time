@@ -14,7 +14,7 @@ optimWaitThresholds = list(HP = 16, LP = 3.0831765)
 # optimal reward rates
 optimRewardRates = c("HP" = 10 / 11, "LP" = 1.174574) 
 # analyses parameters
-tGrid = seq(0, blockSec, by = 2) # time grid for wtw time courses
+tGrid = seq(0, blockSec-1, by = 1) # time grid for wtw time courses
 kmGrid = seq(0, min(tMaxs), by = 0.1) # time grid for Kaplan-Meier survival curves
 save("conditions" = conditions,
      "tMaxs" = tMaxs,

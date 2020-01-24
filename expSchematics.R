@@ -1,15 +1,11 @@
 # this script plots delay distributions and reward rates in two environments
-
 # load experiment parameters 
 load("expParas.RData")
-
 seqHP = rewardDelays$HP
 seqLP = rewardDelays$LP
 
 ## for display purposes, all variables on continous time
 ## are discretized into 0.1 secondition time bins
-## which is lower than the time resoluation of reward delays in
-## the experiment. 
 bin = 0.1 # width of a time bin
 time = list(
   HP = seq(bin, tMaxs[1], by = bin),
@@ -32,16 +28,12 @@ rewardDelayCDFs = list('HP' = cumsum(rewardDelayPDFs$HP),
                       'LP' = cumsum(rewardDelayPDFs$LP))
 
 # average waiting durations given different policies
-# Here we assume rewards occur at the middle of each time bin
+## Here we assume rewards occur at the middle of each time bin
 HP = cumsum((time[['HP']] - 0.5 * bin) * rewardDelayPDFs$HP) / cumsum(rewardDelayPDFs$HP)
 LP = cumsum((time[['LP']] - 0.5 * bin) * rewardDelayPDFs$LP) / cumsum(rewardDelayPDFs$LP)
 meanRewardDelays = list('HP' = HP, 'LP' = LP)
 
 # rewardRates given different policies
-## noticably, since we lower the temporal resoluation, the reward rates 
-## and the optimal behavior variables calculated here might be slightly
-## different from those in expParas.R. These approximate values are only
-## used for display purposes, and we use the exact values in all analysis scripts. 
 HP = tokenValue * rewardDelayCDFs$HP /
   ((meanRewardDelays$HP * rewardDelayCDFs$HP + time[['HP']] * (1 - rewardDelayCDFs$HP)) + iti)
 LP = tokenValue * rewardDelayCDFs$LP /
@@ -49,19 +41,21 @@ LP = tokenValue * rewardDelayCDFs$LP /
 rewardRates = list('HP' = HP, 'LP' = LP)
 
 # optimal raward rates and optimal policies
+## might be different from the values used in expParas.R, 
+## which are calcuated with a higher temporal resoluation
 optimWaitThresholds = list()
 optimWaitThresholds$HP = time$HP[which.max(HP)]
 optimWaitThresholds$LP = time$LP[which.max(LP)]
 optimRewardRates = list()
-optimRewardRates$HP = max(HP)
-optimRewardRates$LP = max(LP)
-
+optimRewardRates$HP = max(HP, na.rm = T)
+optimRewardRates$LP = max(LP, na.rm = T)
 
 # plot CDFs 
 library('ggplot2')
 source('subFxs/plotThemes.R')
 library("tidyr"); library('dplyr')
 dir.create('figures/expSchematics')
+## here we extend the HP CDF to 32s for display purposes
 data.frame(CDF = c(0,c(rewardDelayCDFs$HP, rep(1, length(time$LP) - length(time$HP))), 0, rewardDelayCDFs$LP),
            time = c(0, time$LP, 0, time$LP),
            condition =  rep(c('HP', 'LP'), c(length(time$LP) + 1, length(time$LP) + 1))) %>%
