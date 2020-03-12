@@ -214,7 +214,7 @@ for(c in 1 : 2){
     scale_y_continuous(breaks = c(0, min(tMaxs)), limits = c(0, min(tMaxs))) +
     scale_x_continuous(breaks =  c(0, blockDuration), limits = c(0, blockDuration)) +
     facet_grid(~paraName)
-    ggsave(sprintf("figures/paraEffect/zAuc_%s.eps", condition),
+    ggsave(sprintf("figures/paraEffect/zAuc_%s.png", condition),
                    width = 10, height = 2)
 }
 

@@ -74,7 +74,7 @@ QL2 = function(paras, condition, blockDuration){
         trialEarnings = ifelse(getReward, tokenValue, 0) # payment 
         timeWaited =  ifelse(getReward, scheduledWait, t * stepSec) # waiting duration 
         sellTime = elapsedTime + timeWaited # elapsed task time when the agent sells the token
-        elapsedTime =  elapsedTime + nStepMax + 2 # elapsed task time before the next trial
+        elapsedTime = elapsedTime + timeWaited + iti # elapsed task time before the next trial
         # record trial-wise variables
         trialEarnings_[tIdx] = trialEarnings
         timeWaited_[tIdx] = timeWaited
@@ -85,20 +85,16 @@ QL2 = function(paras, condition, blockDuration){
       }
     }
     
-    # determine iti
-    preIti = iti
-    iti = nStepMax + 2 - sellTime
-    
     # update action values at the end of each trial
     if(elapsedTime <= blockDuration){
       # calculate the reward signal for updating action value which equals 
       # trialEarnings + discounted value of the successor state gamma. Noticably,
       # the successor state at the end of trial is always the iti state before the next trial
-      rwdSignal = trialEarnings + Viti * gamma^iti
+      rwdSignal = trialEarnings + Viti * gamma
       # discounted reward signals for step 1 - (T-1)
       stepRwdSignals = sapply(1 : (T-1), function(t) gamma^(T-t-1) * rwdSignal)
       # discounted reward signals for the iti state
-      itiRwdSignal = rwdSignal * gamma^(T-2 + preIti / stepSec)
+      itiRwdSignal = rwdSignal * gamma^(T-2 + iti / stepSec)
       
       # update Qwaits 
       if(getReward){
