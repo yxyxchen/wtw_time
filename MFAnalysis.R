@@ -5,7 +5,7 @@
 
 # outputs (summarised stats for each participant and each condition, 42 * 2):
 # sumStats = {
-  # id : [84x1 id]
+  # ID : [84x1 ID]
   # condition : [84x1 fac]
   # nExcl : [84x1 int] # total number of excluded trials 
   # muWTWs : [84x1 num] # average willingness to wait (WTW), measured by area under the Kaplan-Meier survival curve
@@ -20,8 +20,7 @@ MFAnalysis = function(isTrct){
   # load libraries
   source('subFxs/loadFxs.R') 
   source('subFxs/analysisFxs.R') 
-  library('dplyr')
-  library("tidyr")
+  library('tidyverse')
   
   # create the output directory
   dir.create("genData")
@@ -34,7 +33,7 @@ MFAnalysis = function(isTrct){
   allData = loadAllData()
   hdrData = allData$hdrData           
   trialData = allData$trialData       
-  ids = hdrData$id 
+  ids = hdrData$id
   nSub = length(ids)                    # n
   cat('Analyzing data for',nSub,'subjects.\n')
   
@@ -46,49 +45,48 @@ MFAnalysis = function(isTrct){
   timeWTW_ = vector(mode = "list", length = nSub * nBlock) 
   trialWTW_ = vector(mode = "list", length = nSub * nBlock) 
   survCurve_ = vector(mode = "list", length = nSub * nBlock) 
-  
-  # loop over inidviduals
+  print("check")
+  # loop over individuals
   for (sIdx in 1 : nSub) {
     # loop over blocks
     for(bkIdx in 1 : nBlock){
       # load trialData 
-      id = ids[sIdx]
-      thisTrialData = trialData[[id]]
+      ID = ids[sIdx]
+      thisTrialData = trialData[[ID]]
       # index for elements in trialData
-      noIdx = (sIdx - 1) * nBlock + bkIdx # 
+      noidx = (sIdx - 1) * nBlock + bkIdx # 
       # extract (and truncate) trialData for this block
       thisTrialData = thisTrialData %>% filter(thisTrialData$blockNum == bkIdx)
       if(isTrct){
-        trctLine = blockSec - max(tMaxs)
+        trctLine = blockSec - max(delayMaxs)
         # truncate trials completed after tractline in each block
-        nExcls[noIdx] = sum(thisTrialData$trialStartTime > trctLine)
+        nExcls[noidx] = sum(thisTrialData$trialStartTime > trctLine)
         thisTrialData = thisTrialData %>% filter(trialStartTime <=  trctLine )
       }else{
-        nExcls[noIdx] = 0
+        nExcls[noidx] = 0
       }
       
       # calcualte totalEarnings
-      totalEarnings_s[noIdx] =  sum(thisTrialData$trialEarnings)
+      totalEarnings_s[noidx] =  sum(thisTrialData$trialEarnings)
       
       # survival analysis
-      
-      kmscResults = kmsc(thisTrialData, min(tMaxs), F, kmGrid)
+      kmscResults = kmsc(thisTrialData, min(delayMaxs), F, kmGrid)
       
       # 
-      muWTWs[noIdx] = kmscResults[['auc']]
-      survCurve_[[noIdx]] = kmscResults$kmOnGrid
-      stdWTWs[[noIdx]] = kmscResults$stdWTW
+      muWTWs[noidx] = kmscResults[['auc']]
+      survCurve_[[noidx]] = kmscResults$kmOnGrid
+      stdWTWs[[noidx]] = kmscResults$stdWTW
       
       # WTW timecourse
-      wtwtsResults = wtwTS(thisTrialData, tGrid, min(tMaxs), F)
-      timeWTW_[[noIdx]] = wtwtsResults$timeWTW
-      trialWTW_[[noIdx]] = wtwtsResults$trialWTW
+      wtwtsResults = wtwTS(thisTrialData, tGrid, min(delayMaxs), F)
+      timeWTW_[[noidx]] = wtwtsResults$timeWTW
+      trialWTW_[[noidx]] = wtwtsResults$trialWTW
     }
-      
   }
+  
   # return outputs
   sumStats = data.frame(
-    id = rep(ids, each = 2),
+    ID = rep(ids, each = 2),
     condition = rep(c('LP', 'HP'), nSub),
     nExcl = nExcls,
     totalEarnings = totalEarnings_s,

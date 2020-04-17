@@ -1,11 +1,6 @@
 # plots a single subject's trial-by-trial data
 trialPlots <- function(thisTrialData) {
   source('./subFxs/plotThemes.R')
-  nBlock = length(unique(thisTrialData$blockNum))
-  # num of trials in each block
-  nTrials = sapply(1:nBlock, function(i) sum(thisTrialData$blockNum == i))
-  # num of trials accumulated across blocks
-  ac_nTrials = cumsum(nTrials)
   # ensure timeWaited = scheduledWait on rewarded trials
   thisTrialData = within(thisTrialData, {timeWaited[trialEarnings!= 0] = scheduledWait[trialEarnings!= 0]})
   # plot
@@ -17,9 +12,7 @@ trialPlots <- function(thisTrialData) {
     geom_point() + geom_line() + scale_color_manual(values = c("red", "blue")) +
     geom_point(data = thisTrialData[thisTrialData$trialEarnings == 0, ],
                aes(trialNum, scheduledWait),
-               color = 'black') + 
-    geom_vline(xintercept = head(ac_nTrials, nBlock - 1),
-               color = "grey", linetype = "dashed", size = 2) +
+               color = 'black') +
     xlab("Trial num") + ylab("Time (s)") + 
     myTheme 
   print(p)
@@ -35,10 +28,8 @@ kmsc <- function(thisTrialData, tMax, plotKMSC=FALSE, grid) {
   # ensure timeWaited = scheduledWait on rewarded trials
   thisTrialData = within(thisTrialData, {timeWaited[trialEarnings!= 0] = scheduledWait[trialEarnings!= 0]})
   # fit a kaplan-meier survival curve
-  kmfit = with(thisTrialData,{
-    survfit(Surv(timeWaited, (trialEarnings == 0), type='right') ~ 1, 
+  kmfit = survfit(Surv(thisTrialData$timeWaited, (thisTrialData$trialEarnings == 0), type='right') ~ 1, 
             type='kaplan-meier', conf.type='none', start.time=0, se.fit=FALSE)
-  })
   # extract elements of the survival curve object 
   kmT = kmfit$time # time value 
   kmF = kmfit$surv # function value
@@ -123,39 +114,6 @@ wtwTS <- function(thisTrialData, tGrid, wtwCeiling, plotWTW = F) {
   # return outputs 
   outputs = list(timeWTW = timeWTW,  trialWTW = trialWTW)
   return(outputs)
-}
-
-# resample pair-wise sequences
-# inputs:
-# ys: y in the original sequence
-# xs: x in the original sequence
-# Xs: x in the new sequence
-# outputs: 
-# Ys : y in the new sequence 
-resample = function(ys, xs, Xs){
-  isBreak = F
-  # initialize Ys
-  Ys = rep(NA, length = length(Xs))
-  for(i in 1 : length(Xs)){
-    # for each X in Xs
-    X = Xs[i]
-    # find the index of cloest x value on the right
-    # if closest_right_x_idx exists 
-    if(X <= tail(xs,1)) {
-      # Y takes the corresonding y value
-      closest_right_x_idx = min(which(xs >= X))
-      Ys[i] = ys[closest_right_x_idx]
-    }else{
-      isBreak = T
-      lastY = i - 1
-      break
-    }
-  }
-  # fill the remaining elements in Ys by the exisiting last element
-  if(isBreak){
-    Ys[(lastY + 1) : length(Xs)] = Ys[lastY]
-  }
-  return(Ys)
 }
 
 # this function can truncate trials in the simualtion object
